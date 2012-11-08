@@ -1,0 +1,10 @@
+#!/bin/bash
+#Author: Sam Gleske
+#OpenSSL 1.0.1 14 Mar 2012
+#Description:
+#  Generate a key and a Certificate Signing request using the server name as the argument.
+#
+#Usage:
+#  cert someserver.drexel.edu
+
+openssl req -out $1.csr -new -newkey rsa:2048 -nodes -subj "/C=US/ST=Pennsylvania/L=Philadelphia/O=Drexel University/OU=IRT/CN=$1" -keyout $1.key
