@@ -67,61 +67,59 @@ fi
 
 #custom functions added by Sam
 start() {
-    cd $TOMCAT_HOME/bin
-    echo TOMCAT_CMD_START = $TOMCAT_CMD_START
-    
-    if [ -z "$SUBIT" ]; then
-        eval $TOMCAT_CMD_START >${TOMCAT_CONSOLE} 2>&1 &
-    else
-        $SUBIT "$TOMCAT_CMD_START >${TOMCAT_CONSOLE} 2>&1 &" 
-    fi
+  cd $TOMCAT_HOME/bin
+  echo TOMCAT_CMD_START = $TOMCAT_CMD_START
+  if [ -z "$SUBIT" ]; then
+    eval $TOMCAT_CMD_START >${TOMCAT_CONSOLE} 2>&1 &
+  else
+    $SUBIT "$TOMCAT_CMD_START >${TOMCAT_CONSOLE} 2>&1 &" 
+  fi
 }
 
 wait() {
-    while true;do
-      pid=`ps aux | grep "^$TOMCAT_USER" | grep java | awk '{print $2}'`
-      if [ -z $pid ];then
-	return 0
-      else
-	sleep 1
-	echo -n "."
-      fi
-    done
+  while true;do
+    pid=`ps aux | grep "^$TOMCAT_USER" | grep java | awk '{print $2}'`
+    if [ -z $pid ];then
+      return 0
+    else
+      sleep 1
+      echo -n "."
+    fi
+  done
 }
 
 stop() {
-    #Sam's custom kill command for jboss
-    kill -s 15 `ps aux | grep "^$TOMCAT_USER" | grep java | awk '{print $2}'` 2> /dev/null
-    if [ "$?" -eq "0" ];then
-        echo -n "Tomcat is stopping."
-	wait && success
-	echo ""
-    else
-        failure
-        echo "Tomcat not running..."
-    fi
-
+  #Sam's custom kill command for tomcat
+  kill -s 15 `ps aux | grep "^$TOMCAT_USER" | grep java | awk '{print $2}'` 2> /dev/null
+  if [ "$?" -eq "0" ];then
+    echo -n "Tomcat is stopping."
+    wait && success
+    echo ""
+  else
+    failure
+    echo "Tomcat not running..."
+  fi
 }
 
 restart() {
-    stop
-    start
+  stop
+  start
 }
 
 case "$1" in
-start)
+  start)
     start
     ;;
-stop)
+  stop)
     stop
     ;;
-restart)
+  restart)
     restart
     ;;
-status)
+  status)
     status java
     ;;
-*)
+  *)
     echo "usage: $0 (start|stop|restart|status|help)"
 esac
 

@@ -69,61 +69,60 @@ fi
 
 #custom functions added by Sam
 start() {
-    cd $JBOSS_HOME/bin
-    echo JBOSS_CMD_START = $JBOSS_CMD_START
-    
-    if [ -z "$SUBIT" ]; then
-        eval $JBOSS_CMD_START >${JBOSS_CONSOLE} 2>&1 &
-    else
-        $SUBIT "$JBOSS_CMD_START >${JBOSS_CONSOLE} 2>&1 &" 
-    fi
+  cd $JBOSS_HOME/bin
+  echo JBOSS_CMD_START = $JBOSS_CMD_START
+  if [ -z "$SUBIT" ]; then
+    eval $JBOSS_CMD_START >${JBOSS_CONSOLE} 2>&1 &
+  else
+    $SUBIT "$JBOSS_CMD_START >${JBOSS_CONSOLE} 2>&1 &" 
+  fi
 }
 
 wait() {
-    while true;do
-      pid=`ps aux | awk '($1 == "'$JBOSS_USER'") && ($0 ~ /java/) {print $2}'`
-      if [ -z "$pid" ];then
-	return 0
-      else
-	sleep 1
-	echo -n "."
-      fi
-    done
+  while true;do
+    pid=`ps aux | awk '($1 == "'$JBOSS_USER'") && ($0 ~ /java/) {print $2}'`
+    if [ -z "$pid" ];then
+      return 0
+    else
+      sleep 1
+      echo -n "."
+    fi
+  done
 }
 
 stop() {
-    #Sam's custom kill command for jboss
-    kill -s 15 `ps aux | awk '($1 == "'$JBOSS_USER'") && ($0 ~ /java/) {print $2}'` 2> /dev/null
-    if [ "$?" -eq "0" ];then
-        echo -n "JBoss is stopping."
-	wait && success
-	echo ""
-    else
-        failure
-        echo "JBoss not running..."
-    fi
+  #Sam's custom kill command for jboss
+  kill -s 15 `ps aux | awk '($1 == "'$JBOSS_USER'") && ($0 ~ /java/) {print $2}'` 2> /dev/null
+  if [ "$?" -eq "0" ];then
+    echo -n "JBoss is stopping."
+    wait && success
+    echo ""
+  else
+    failure
+    echo "JBoss not running..."
+  fi
 
 }
 
 restart() {
-    stop
-    start
+  stop
+  start
 }
 
 case "$1" in
-start)
+  start)
     start
     ;;
-stop)
+  stop)
     stop
     ;;
-restart)
+  restart)
     restart
     ;;
-status)
+  status)
     status java
     ;;
-*)
+  *)
     echo "usage: $0 (start|stop|restart|status|help)"
 esac
 
