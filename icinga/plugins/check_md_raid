@@ -1,0 +1,63 @@
+#!/bin/bash
+#
+# Created by Sebastian Grewe, Jammicron Technology
+#
+# Modified by Sam Gleske (http://www.gleske.net/)
+
+#enable troubleshooting emails (yes=1,no=0)
+email="0"
+emailaddress="your@email.here"
+
+# Get count of raid arrays
+RAID_DEVICES=`grep ^md -c /proc/mdstat`
+
+# Get count of degraded arrays
+RAID_STATUS=`grep "\[.*_.*\]" /proc/mdstat -c` 
+
+# Is an array currently recovering, get percentage of recovery
+RAID_RECOVER=`grep recovery /proc/mdstat | awk '{print $4}'`
+
+# Check raid status
+# RAID recovers --> Warning
+if [[ $RAID_RECOVER ]]; then
+  STATUS="WARNING - Checked $RAID_DEVICES arrays, recovering : $RAID_RECOVER"
+  EXIT=1
+# RAID ok
+elif [[ $RAID_STATUS  == "0" ]]; then
+  STATUS="OK - Checked $RAID_DEVICES arrays."
+  EXIT=0
+# All else critical, better save than sorry
+else
+  STATUS="CRITICAL - Checked $RAID_DEVICES arrays, $RAID_STATUS have FAILED"
+  EXIT=2
+  if [ $email -eq 1 ];then
+    sendmail "$emailaddress" <<EOF
+Subject: RAID FAILURE TROUBLESHOOTING
+
+cat /proc/mdstat
+`/bin/cat /proc/mdstat`
+
+Next steps to take:
+1. unmount drive
+lsof | grep /media/raid
+umount /media/raid
+
+2. mark array as readonly
+mdadm -o /dev/md0
+
+3. start troubleshooting the array
+cat /proc/mdstat
+mdadm --examine /dev/sd[cdef]
+mdadm --examine /dev/md0
+
+4. examine the SMART
+
+EOF
+  fi
+fi
+
+# Status and quit
+echo $STATUS
+exit $EXIT
+#escalations testing
+#exit 0
