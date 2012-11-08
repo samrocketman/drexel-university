@@ -3,6 +3,7 @@
 # Created by Sebastian Grewe, Jammicron Technology
 #
 # Modified by Sam Gleske (http://www.gleske.net/)
+#Source: http://exchange.nagios.org/directory/Plugins/Operating-Systems/Linux/check_md_raid/details
 
 #enable troubleshooting emails (yes=1,no=0)
 email="0"
