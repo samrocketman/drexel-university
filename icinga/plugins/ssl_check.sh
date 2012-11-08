@@ -1,8 +1,17 @@
 #!/bin/bash
 #Created by Sam Gleske
-#Thu Nov  8 16:19:10 EST 2012
-#GNU bash, version 4.2.24(1)-release (x86_64-pc-linux-gnu)
-#OpenSSL 1.0.1 14 Mar 2012
+#Date Created: Thu Nov  8 16:19:10 EST 2012
+#The MIT License
+#Copyright (c) 2012 Samuel Gleske, Drexel University
+#
+#Tested Environment:
+#  Ubuntu 12.04.1 LTS Linux 3.2.0-32-generic x86_64 GNU/Linux
+#  GNU bash, version 4.2.24(1)-release (x86_64-pc-linux-gnu)
+#  GNU coreutils 8.13-3ubuntu3.1
+#  GNU sed version 4.2.1
+#  grep (GNU grep) 2.10
+#  OpenSSL 1.0.1 14 Mar 2012
+#
 #Description:
 #  This simple script checks the expiration of an SSL Certificate.
 #  If the cert is within 30 days of expiration there will be an Icinga warning.
@@ -11,6 +20,8 @@
 #Usage:
 #  ssl_check.sh server:port
 #  ssl_check.sh -f /path/to/cert.crt
+#
+#Required Packages: bash, coreutils, grep, sed, openssl
 
 
 
