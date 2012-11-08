@@ -1,0 +1,23 @@
+#see README file for a description of this file
+# By Sam Gleske (sag47)
+# Created 2012/04/10
+# Linux 2.6.18-194.11.4.el5 x86_64 GNU/Linux
+# GNU bash, version 3.2.25(1)-release (x86_64-redhat-linux-gnu)
+#
+# Spawns off jobs for keeping track of system statics
+# This is meant to be an include of your current shell for job control
+# see jobs, fg, bg, kill commands
+if [ ! -d "results" ];then
+  mkdir results
+fi
+#keep around old trend stats
+for x in ./trendprograms/*_live_trend;do
+  x=${x##*/}
+  if [ -e "./results/${x%_live_trend}_stats.txt" ];then
+    echo "moving ./results/${x%_live_trend}_stats.txt to ./results/${x%_live_trend}_stats_$dates.txt"
+    mv ./results/${x%_live_trend}_stats.txt ./results/${x%_live_trend}_stats_$dates.txt
+  fi
+done
+./trendprograms/jvm_memory_live_trend >> ./results/jvm_memory_stats.txt &
+./trendprograms/jvm_oracleconnections_live_trend >> ./results/jvm_oracleconnections_stats.txt &
+./trendprograms/open_file_descriptors_live_trend >> ./results/open_file_descriptors_stats.txt &

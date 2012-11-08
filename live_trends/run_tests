@@ -1,0 +1,47 @@
+#see README file for a description of this file
+# By Sam Gleske (sag47)
+# Created 2012/04/10
+# Linux 2.6.18-194.11.4.el5 x86_64 GNU/Linux
+# GNU bash, version 3.2.25(1)-release (x86_64-redhat-linux-gnu)
+#
+# Spawns off jobs for keeping track of system statics.
+# This will automatically search the trendprograms/ folder for programs to create jobs from.
+# Issue the killall_jobs command to kill all the spawned jobs.
+# This is meant to be an include of your current shell for job control.
+# see jobs, fg, bg, kill commands.
+jobpids_file=/tmp/live_trend_pids
+jvm_testing_pwd=/root/jvm_testing
+touch $jobpids_file
+dates=$(date '+%s')
+if [ "$(cat $jobpids_file)" != "" ];then
+  for x in $(cat $jobpids_file);do kill $x;done
+  echo "" > $jobpids_file
+  sleep 1
+fi
+
+if [ ! -d "$jvm_testing_pwd/results" ];then
+  mkdir "$jvm_testing_pwd/results"
+fi
+
+#keep around old trend stats
+for x in $jvm_testing_pwd/trendprograms/*_live_trend;do
+  if [ ! -d "$jvm_testing_pwd/results/old" ];then
+	mkdir "$jvm_testing_pwd/results/old"
+  fi
+  x=${x##*/}
+  if [ -e "$jvm_testing_pwd/results/${x%_live_trend}_stats.txt" ];then
+    echo "moving $jvm_testing_pwd/results/${x%_live_trend}_stats.txt to $jvm_testing_pwd/results/old/${x%_live_trend}_stats_$dates.txt"
+    mv $jvm_testing_pwd/results/${x%_live_trend}_stats.txt $jvm_testing_pwd/results/old/${x%_live_trend}_stats_$dates.txt
+  fi
+done
+
+#start all enabled live_trend programs in the trendprograms/ folder
+# i.e. any program which ends with "_live_trend"
+for x in $jvm_testing_pwd/trendprograms/*_live_trend;do
+  y=${x##*/}
+  y=$jvm_testing_pwd/results/${y%_live_trend}_stats.txt
+  echo "starting $x"
+  $x >> $y &
+  echo $! >> $jobpids_file
+done
+

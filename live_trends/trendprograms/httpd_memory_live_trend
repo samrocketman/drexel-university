@@ -1,0 +1,42 @@
+#!/bin/bash
+# By Sam Gleske (sag47)
+# Created 2012/04/30
+# Linux 2.6.18-194.11.4.el5 x86_64 GNU/Linux
+# GNU bash, version 3.2.25(1)-release (x86_64-redhat-linux-gnu)
+# GNU Awk 3.1.5
+#
+# live_trend info
+# This live_trend program samples every second.
+# This program will not output if the current second sample is the same as the last second sample.
+# That way only unique entries with associated timestamps will be output.
+# All proceeding timestamp entries not output are assumed to be the same value as the current timestamp value.
+#
+# httpd_memory_live_trend info
+# This trending program shows the httpd memory usage over time.
+# Output format
+#     httpd Memory Stats Info; local date and time in human readable format; date in seconds since 1970-01-01 00:00:00 UTC
+
+# CONFIGURE VARIABLES
+user="apache"
+proc="httpd"
+#END CONFIGURE VARIABLES
+
+sysmem="$(awk '$1 == "MemTotal:" {print $2/1024}' /proc/meminfo)"
+while true;do
+#  perc="$(ps axo user,pid,ppid,%mem,comm | awk '($5 == "'$proc'") && ($1 == "'$user'") && (last != $4) {last=$4;print $4}')"
+  perc="$(ps axo user,pid,ppid,%mem,comm | awk 'BEGIN{memusage=0.0}; ($5 == "'$proc'") && ($1 == "'$user'"){memusage=memusage+$4}; END{print memusage}')"
+  if [ -z "$perc" ];then
+    mem="0.0"
+  else
+    mem="$(echo "$perc" | awk '{print $1*'$sysmem'/100}')"
+  fi
+  mem_perc="$(echo "$mem" | awk '{print $1/'$sysmem'*100}')"
+  current="$proc Memory = $mem / $sysmem MB ($mem_perc %)"
+  date="$(date '+%Y-%m-%d %I:%M:%S %p')"
+  dates="$(date '+%s')"
+  if [ "$current" != "$last" ];then
+    echo "$current; $date; $dates";
+  fi
+  last="$current"
+  sleep 1;
+done

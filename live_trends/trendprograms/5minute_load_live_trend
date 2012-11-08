@@ -1,0 +1,33 @@
+#!/bin/bash
+# By Sam Gleske (sag47)
+# Created Thu Apr 12 14:50:49 EDT 2012
+# Linux 2.6.18-194.11.4.el5 x86_64 GNU/Linux
+# GNU bash, version 3.2.25(1)-release (x86_64-redhat-linux-gnu)
+# GNU Awk 3.1.5
+#
+# live_trend info
+# This live_trend program samples every second.
+# This program will not output if the current second sample is the same as the last second sample.
+# That way only unique entries with associated timestamps will be output.
+# All proceeding timestamp entries not output are assumed to be the same value as the current timestamp value.
+#
+# 5minute_load_live_trend info
+# This trending program shows the 5 minute system load.
+# You configure some of the variables for the specific user you wish to analyze. See # CONFIGURE VARIABLES section
+# Output format
+#     5 minute load = ####; local date and time in human readable format; date in seconds since 1970-01-01 00:00:00 UTC
+
+# CONFIGURE VARIABLES
+#no variables to configure
+
+# END CONFIGURE VARIABLES
+while true;do 
+  current="5 minute load = $(uptime | cut -d, -f5 | awk '{print $1}')"
+  date=$(date '+%Y-%m-%d %I:%M:%S %p')
+  dates=$(date '+%s')
+  if [ "$current" != "$last" ];then
+    echo "$current; $date; $dates";
+  fi
+  last=$current
+  sleep 1
+done

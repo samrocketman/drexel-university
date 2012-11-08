@@ -1,0 +1,37 @@
+#!/bin/bash
+# By Sam Gleske (sag47)
+# Created 2012/04/10
+# Linux 2.6.18-194.11.4.el5 x86_64 GNU/Linux
+# GNU bash, version 3.2.25(1)-release (x86_64-redhat-linux-gnu)
+# GNU Awk 3.1.5
+#
+# live_trend info
+# This live_trend program samples every second.
+# This program will not output if the current second sample is the same as the last second sample.
+# That way only unique entries with associated timestamps will be output.
+# All proceeding timestamp entries not output are assumed to be the same value as the current timestamp value.
+#
+# jvm_oracleconnections_live_trend info
+# This trending program shows the number of connections a JVM makes to an Oracle Database.
+# You configure some of the variables for the specific JVM you wish to analyze. See # CONFIGURE VARIABLES section
+# Output format
+#     Number of OracleDB connections: ####; local date and time in human readable format; date in seconds since 1970-01-01 00:00:00 UTC
+
+# CONFIGURE VARIABLES
+jvmuser="tomcat" #this is the user of the spawned subshell running the jvm
+pathgrep="tomcat-du" #this is a unique value in the full pathname of the jvm server which is unique compared to other jvm servers under the same jvmuser.
+oracleport="2337" #the port in which connections connecting to the oracle database would have.
+
+# END CONFIGURE VARIABLES
+while true;do
+  #pid=$(ps u --user $jvmuser | grep $pathgrep | awk '{print $2}')
+  pid=$(ps u --user $jvmuser | awk '($0 !~ /openoffice/) && ($0 ~ /'$pathgrep'/) {print $2}')
+  current="Number of OracleDB connections: $(netstat -anp | grep "$oracleport" | grep "$pid/java" | wc -l)"
+  date=$(date '+%Y-%m-%d %I:%M:%S %p')
+  dates=$(date '+%s')
+  if [ "$current" != "$last" ];then
+    echo "$current; $date; $dates";
+  fi
+  last=$current
+  sleep 1
+done

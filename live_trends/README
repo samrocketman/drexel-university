@@ -1,0 +1,59 @@
+Scripts are designed to record system performance data and output them to a plain text file.
+
+The following five sections outline how to run and manage the live_trend programs listed in the trendprograms/ folder.
+See the comment block at the head of each program in the trendprograms/ folder for a description of the program.
+
+== About run_tests ==
+DO NOT chmod +x run_tests
+This file is meant to be run as an include to the current shell so that you can have process control over the jobs.
+This file is the core to starting all jobs.
+TESTS
+The run_tests files starts all programs in the trendprograms/ folder which end in "_live_trend".
+To disable a trend program from running simply rename the end of the file to something other than "_live_trend".
+RESULTS
+Each *_live_trend program will have a corresponding result named *_stats.txt in the results/ folder.
+For example ./trendprograms/jvm_memory_live_trend has its result stored in ./results/jvm_memory_stats.txt.
+BEHAVIOR
+If there is *_live_trend jobs already running then they will be killed using the pids file and will be started again.
+If the result file for the *_live_trend program already exists then run_tests will move it to a backup name and a new result file will be created.
+EXAMPLE USAGE
+    $ . run_tests
+
+== About run_tests_manually ==
+DO NOT chmod +x run_tests_manually
+Similar to run_tests but instead of running everything automatically you must manually edit the run_tests_manually file to include live_trend programs.
+This file will automatically backup result files like run_tests.
+Instead of using killall_jobs program control the jobs you must utilize the jobs, fg, and bg commands to manage the jobs.
+EXAMPLE USAGE
+    $ . run_tests_manually
+
+== About pids file ==
+You can largely ignore this file.  It is only used by the killall_jobs program for killing all jobs at once when testing is done.
+If no jobs show up by running the jobs command then you can simply clear this file.
+By default the pids file is located at /tmp/live_trend_pids
+
+== About killall_jobs ==
+This program uses the pids file to kill all running jobs at once when testing is done.
+This program will only kill jobs whose PID is listed in the pids file.
+This program will delete the pids file after killing all jobs.
+Example Usage:
+    $ killall_jobs
+
+== About view_result_file ==
+This program cats the file of your choice by showing the whole file and then following future output updates (tail -f)
+If you do not need this behavior then you can simply run tail -f jvm_memory_stats.txt or any other result file.
+Example Usage:
+    $ view_result_file ./results/jvm_memory_stats.txt
+
+== About generate_aligned_csv_file.py ==
+This program combines the results of all files which are given to it as arguments and align the timestamps producing a new list with the combined results.
+When the results are combined the timestamps will be aligned.
+The purpose of this is so that all data can be represented on the same graph easily.
+In order to have the correct time show up in Libre office graphs you must do the following:
+    Go to Tools > Options, select LibreOffice Calc > Calculate
+    Ensure the Date is set to 12/30/1899.
+    Then to calculate from the Unix timestamp to a local time in LibreOffice you must apply the following Cell equation where A2 is the Timestamp:
+        =(A2-3600*4)/3600/24+25569
+Example Usage:
+    $ generate_aligned_csv_file.py jvm_memory_stats.txt jvm_oracleconnections_stats.txt open_file_descriptors_stats.txt
+    $ generate_aligned_csv_file.py ./results/{1,5,15}minute_load_stats.txt

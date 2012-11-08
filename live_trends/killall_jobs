@@ -1,0 +1,17 @@
+#!/bin/bash
+# By Sam Gleske (sag47)
+# Created 2012/04/10
+# Linux 2.6.18-194.11.4.el5 x86_64 GNU/Linux
+# GNU bash, version 3.2.25(1)-release (x86_64-redhat-linux-gnu)
+#
+# Kills all jobs created from the run_tests include file.
+
+jobpids_file=/tmp/live_trend_pids
+
+if [ ! -e $jobpids_file ];then
+  echo "There is no $jobpids_file file."
+  echo "Nothing has been killed."
+  exit
+fi
+for x in $(cat $jobpids_file);do kill $x;done
+\rm -f $jobpids_file

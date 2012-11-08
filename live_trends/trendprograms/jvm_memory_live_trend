@@ -1,0 +1,49 @@
+#!/bin/bash
+# By Sam Gleske (sag47)
+# Created 2012/04/10
+# Linux 2.6.18-194.11.4.el5 x86_64 GNU/Linux
+# GNU bash, version 3.2.25(1)-release (x86_64-redhat-linux-gnu)
+# GNU Awk 3.1.5
+#
+# live_trend info
+# This live_trend program samples every second.
+# This program will not output if the current second sample is the same as the last second sample.
+# That way only unique entries with associated timestamps will be output.
+# All proceeding timestamp entries not output are assumed to be the same value as the current timestamp value.
+#
+# jvm_memory_live_trend info
+# This trending program shows the JVM memory usage over time.
+# You configure some of the variables for the specific JVM you wish to analyze. See # CONFIGURE VARIABLES section
+# Output format
+#     JVM Memory Stats Info; local date and time in human readable format; date in seconds since 1970-01-01 00:00:00 UTC
+
+# CONFIGURE VARIABLES
+jvmuser="tomcat" #this is the user of the spawned subshell running the jvm
+pathgrep="tomcat-du" #this is a unique value in the full pathname of the jvm server which is unique compared to other jvm servers under the same jvmuser.
+max_jvm_memory=4096 #this value should be the same as what is set from $JAVA_OPTS = -Xmx4096m
+
+#END CONFIGURE VARIABLES
+#get the system memory in MB
+#sysmem=$(grep 'MemTotal:' /proc/meminfo | awk '{print $2}' | sed 's/\(.*\)/\1\/1024/' | bc)
+sysmem=$(awk '$1 == "MemTotal:" {print $2/1024}' /proc/meminfo)
+
+while true;do
+  perc=$(ps u --user $jvmuser | awk '($0 !~ /openoffice/) && ($0 ~ /'$pathgrep'/) { print $4}')
+  #perc=$(ps u --user $jvmuser | grep $pathgrep | grep -v 'openoffice' | awk '{print $4}')
+  if [ -z "$perc" ];then #if the jvm shuts down then assume memory usage is zero
+    #echo "No $pathgrep instance found, exiting jvm_memory_live_trend" > /dev/stderr
+    mem="0.0"
+  else
+    mem=$(echo "$perc" | awk '{print $1'*$sysmem'/100}')
+  fi
+  mem_perc=$(echo "$mem" | awk '{print $1/'$max_jvm_memory'*100}')
+  #mem_perc=$(echo "$mem/$max_jvm_memory*100" | bc -l)
+  current="JVM Memory = $mem / $max_jvm_memory MB ($mem_perc %)"
+  date=$(date '+%Y-%m-%d %I:%M:%S %p')
+  dates=$(date '+%s')
+  if [ "$current" != "$last" ];then
+    echo "$current; $date; $dates";
+  fi
+  last=$current
+  sleep 1;
+done
