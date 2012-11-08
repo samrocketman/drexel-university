@@ -1,0 +1,71 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+# Author: Sam Gleske (sag47@drexel.edu)
+# Date: 30 Sep 2011
+# Description: Reports the number of database network connections open on port 2337
+# check_db_connections
+# tested on Python 2.4-2.6
+
+from sys import exit
+from optparse import OptionParser
+from commands import getstatusoutput
+
+#exit status
+UNKNOWN = 3
+OK = 0
+WARNING = 1
+CRITICAL = 2
+
+def main():
+  #parsing the arguments for -w and -c
+  #see docs http://docs.python.org/library/optparse.html
+  parser = OptionParser(
+    #usage = "usage: %prog -w limit -c limit",
+    version = "%prog v0.1 created by Sam Gleske",
+    description="This nagios plugin is designed to give the number of database network connections open on port 2337."
+    )
+  parser.add_option("-w",action="store",type="int",dest="w",default=False,help="Connection limit for the warning threshold.",metavar="limit")
+  parser.add_option("-c",action="store",type="int",dest="c",default=False,help="Connection limit for the critical threshold.",metavar="limit")
+  (options, args) = parser.parse_args()
+  
+  #Check to make sure the user even provided an argument for -c or -w and if not exit out
+  if not bool(options.c) or not bool(options.w):
+    print "Syntax error: no -w or -c specified, try -h for help"
+    exit(UNKNOWN)
+
+  
+  # Execute a command which gives the number of network connections on port 2337.
+  # docs http://docs.python.org/library/commands.html
+  # docs http://docs.python.org/tutorial/introduction.html#lists
+  (returnCode, response) = getstatusoutput('netstat -nt | grep 2337 | wc -l')
+
+  if returnCode != 0:
+    print "UNKNOWN - %s" % (response)
+    exit(UNKNOWN)
+
+  connections = int(response)
+
+  #set the thresholds for warning and critical
+  (wThresh,cThresh) = (options.w,options.c)
+  #I know this seems excessive but it's required since -w and -c could either be an int or a string (because of the % symbol)
+  if cThresh <= wThresh:
+    print "UNKNOWN - warning (-w %s) must be less than critical (-c %s)" % (options.w, options.c)
+    exit(UNKNOWN)
+  
+  #The output of the following is the python version of printf, see documentation.
+  #http://docs.python.org/library/stdtypes.html#string-formatting
+  #performance data goes like so - |graph_title=current_value;warning_value;critical_value;graph_min_value;graph_max_value (optional)
+  elif connections >= cThresh:
+    print "DB_CONNECTIONS CRITICAL - %d connections |db_connections=%d;%d;%d;0" % (connections,connections,wThresh,cThresh)
+    exit(CRITICAL)
+  if connections >= wThresh:
+    print "DB_CONNECTIONS WARNING - %d connections |db_connections=%d;%d;%d;0" % (connections,connections,wThresh,cThresh)
+    exit(WARNING)
+  else:
+    print "DB_CONNECTIONS OK - %d connections |db_connections=%d;%d;%d;0" % (connections,connections,wThresh,cThresh)
+    exit(OK)
+  
+  
+
+if __name__ == "__main__":
+  main()

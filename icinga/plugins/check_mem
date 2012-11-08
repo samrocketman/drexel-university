@@ -1,0 +1,91 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+# Author: Sam Gleske (sag47@drexel.edu)
+# Date: 26 Sep 2011
+# Description: Reports free memory statistics with usage data for graphs.
+# check_mem
+# tested on Python 2.4-2.6
+
+from sys import exit,exc_info
+from optparse import OptionParser
+
+#exit status
+UNKNOWN = 3
+OK = 0
+WARNING = 1
+CRITICAL = 2
+
+def main():
+  global memTotal, memCached, memFree, percMemFree, cThresh, wThresh
+  
+  #parsing the arguments for -w and -c
+  #see docs http://docs.python.org/library/optparse.html
+  parser = OptionParser(
+    #usage = "usage: %prog -w limit -c limit",
+    version = "%prog v0.1 created by Sam Gleske",
+    description="This nagios plugin is designed to give status and performance data of local physical free memory."
+    )
+  parser.add_option("-w",action="store",type="string",dest="w",default=False,help="free memory warning threshold MB or % (e.g. 50 or 50%)",metavar="limit")
+  parser.add_option("-c",action="store",type="string",dest="c",default=False,help="free memory critical threshold MB or % (e.g. 50 or 50%)",metavar="limit")
+  (options, args) = parser.parse_args()
+  
+  #Check to make sure the user even provided an argument for -c or -w and if not exit out
+  if not bool(options.c) or not bool(options.w):
+    print "Syntax error: no -w or -c specified, try -h for help"
+    exit(UNKNOWN)
+
+  
+  # Read /proc/meminfo to get the current memory values.
+  #More information on split see docs
+  #http://docs.python.org/library/stdtypes.html#str.split
+  f = open('/proc/meminfo', "r")
+  for line in f.readlines():
+    if line.split()[0] == 'MemTotal:':
+      memTotal = int(line.split()[1])/1024 #calculate for MB
+    if line.split()[0] == 'MemFree:':
+      memFree = int(line.split()[1])/1024
+    if line.split()[0] == 'Cached:':
+      memCached = int(line.split()[1])/1024
+
+  #Calculate the true free memory
+  memFree = memFree + memCached
+  
+  #Calculate free memory thresholds in MB (warning and critical)
+  #check to see if the last character is % then calculate as percent, otherwise take it as a value in MB
+  if options.w[len(options.w)-1] == "%":
+    wThresh = int(float(options.w.split('%')[0])/100*memTotal)
+  else:
+    wThresh = int(options.w)
+
+  if options.c[len(options.c)-1] == "%":
+    cThresh = int(float(options.c.split('%')[0])/100*memTotal)
+  else:
+    cThresh = int(options.c)
+  
+  #I know this seems excessive but it's required since -w and -c could either be an int or a string (because of the % symbol)
+  if cThresh >= wThresh:
+    print "UNKNOWN - warning (-w %s) must be greater than critical (-c %s)" % (options.w, options.c)
+    exit(UNKNOWN)
+  
+  #Calculate percentage of free memory (100% is completely free and 0% is full memory)
+  percMemFree = int(float(memFree)/float(memTotal)*100)
+  
+  #The output of the following is the python version of printf, see documentation.
+  #http://docs.python.org/library/stdtypes.html#string-formatting
+  if memFree < 0:
+    print "MEMORY UNKNOWN - free memory less than zero?|memory=0MB;%d;%d;0;%d" % (wThresh,cThresh,memTotal)
+    exit(UNKNOWN)
+  elif memFree <= cThresh:
+    print "MEMORY CRITICAL - %d%% free (%d MB out of %d MB) |memory=%dMB;%d;%d;0;%d" % (percMemFree,memFree,memTotal,memFree,wThresh,cThresh,memTotal)
+    exit(CRITICAL)
+  elif memFree <= wThresh:
+    print "MEMORY WARNING - %d%% free (%d MB out of %d MB) |memory=%dMB;%d;%d;0;%d" % (percMemFree,memFree,memTotal,memFree,wThresh,cThresh,memTotal)
+    exit(WARNING)
+  else:
+    print "MEMORY OK - %d%% free (%d MB out of %d MB) |memory=%dMB;%d;%d;0;%d" % (percMemFree,memFree,memTotal,memFree,wThresh,cThresh,memTotal)
+    exit(OK)
+  
+  
+
+if __name__ == "__main__":
+  main()

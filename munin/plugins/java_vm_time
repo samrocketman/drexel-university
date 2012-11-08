@@ -1,0 +1,81 @@
+#!/bin/bash
+#Author: Chris Holcombe
+#parsegarbagelogs.py located at https://github.com/sag47/drexel-university/tree/master/icinga/plugins/jvm_health/
+
+
+#A plugin to send jvm statistics to munin for graphing
+
+
+SQLFILE=/var/db/sqldb                           #SQLite database to store the information we're collecting
+PYTHON_FILE=/usr/local/sbin/parsegarbagelogs.py
+MEM_GRAPH="java_graph"
+TIME_GRAPH="java_vm_time"
+UPTIME_GRAPH="java_vm_uptime"
+BASENAME=`basename $0`
+
+if [ "$BASENAME" = "$MEM_GRAPH" ]; then
+    if [ "$1" = "config" ]; then
+        echo "graph_title JVM Memory usage"
+        echo "graph_order S O P"
+        echo "graph_vlabel usage"
+        echo "usage.label usage"
+        echo "graph_info This graph shows JVM memory usage."
+        echo "graph_scale no"
+        echo "S.label Survivor1_Space"
+        echo "O.label Old_Space"
+        echo "P.label Perm_Space"
+        exit 0
+    fi
+    if [ -e $SQLFILE ]; then
+        #DATA=$(sqlite3 $SQLFILE "select *,ROWID from datapoints ORDER BY ROWID DESC Limit 1")
+        DATA=$($PYTHON_FILE -g -s $SQLFILE)
+        echo "S.value `echo $DATA | cut -d ',' -f 2`"
+        echo "O.value `echo $DATA | cut -d ',' -f 3`"
+        echo "P.value `echo $DATA | cut -d ',' -f 4`"
+        else
+        echo "Couldn't find sql db file"
+        exit -1
+    fi
+elif [ "$BASENAME" = "$TIME_GRAPH" ]; then
+    if [ "$1" = "config" ]; then
+        echo "graph_title JVM Garbage Collection Time Spent"
+        echo "graph_order YGC_Time FGC_Time TGC_Time Uptime"
+        echo "graph_vlabel time"
+        echo "time.label Time"
+        echo "graph_info This graph shows how long the JVM spend garbage collecting."
+        echo "graph_scale no"
+        echo "YGC_Time.label Young_GC_Time"
+        echo "FGC_Time.label Full_GC_Time"
+        echo "TGC_Time.label Total_GC_Time"
+        exit 0
+    fi
+    if [ -e $SQLFILE ]; then
+        #DATA=$(sqlite3 $SQLFILE "select *,ROWID from datapoints ORDER BY ROWID DESC Limit 1")
+        DATA=$($PYTHON_FILE -g -s $SQLFILE)
+        echo "YGC_Time.value `echo $DATA | cut -d ',' -f 6`"
+        echo "FGC_Time.value `echo $DATA | cut -d ',' -f 8`"
+        echo "TGC_Time.value `echo $DATA | cut -d ',' -f 9`"
+    else
+        echo "Couldn't find sql db file"
+        exit -1
+    fi
+elif [ "$BASENAME" = "$UPTIME_GRAPH" ]; then
+    if [ "$1" = "config" ]; then
+        echo "graph_title JVM Uptime"
+        echo "graph_order Uptime"
+        echo "graph_vlabel time"
+        echo "time.label Time"
+        echo "graph_info This graph shows how long the JVM has been up."
+        echo "graph_scale no"
+        echo "Uptime.label Uptime"
+        exit 0
+    fi
+    if [ -e $SQLFILE ]; then
+        #DATA=$(sqlite3 $SQLFILE "select *,ROWID from datapoints ORDER BY ROWID DESC Limit 1")
+        DATA=$($PYTHON_FILE -g -s $SQLFILE)
+        echo "Uptime.value `echo $DATA | cut -d ',' -f 1`"
+    else
+        echo "Couldn't find sql db file"
+        exit -1
+    fi
+fi

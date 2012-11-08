@@ -1,0 +1,67 @@
+#!/usr/bin/perl -w
+# code to check ssl expiration status
+# takes three arguments, expireation threshold, host, and port, separated by a space
+# author: kyle halpin/drexel university
+# date: 2/26/2009 
+
+
+use strict; 
+use warnings;
+use Getopt::Std;
+use Date::Manip;
+
+my %ERRORS=('OK'=>0,'WARNING'=>1,'CRITICAL'=>2,'UNKNOWN'=>3,'DEPENDENT'=>4);
+
+# parse args
+my %opts;
+getopts('h:p:t:f:',\%opts);
+my $host = $opts{'h'};
+my $port = $opts{'p'};
+my $file = $opts{'f'};
+my $expiration_threshold = $opts{'t'};
+if(!defined($expiration_threshold)){
+	$expiration_threshold = 14;
+}
+
+my $max_differential_seconds = $expiration_threshold * 86400;
+
+
+# add new chunk to work with a file based cert, not network based gets
+my $cmd = "";
+
+if(defined($opts{'f'})){
+	chomp($file);
+	$cmd = "cat $file | openssl x509 -text | grep 'Not\ After'";
+}else{
+	$cmd = "echo -n '' | openssl s_client -connect $host:$port 2>/dev/null | sed -ne '/-BEGIN CERTIFICATE-/,/-END CERTIFICATE-/p' |openssl x509 -text | grep 'Not\ After'"; 
+}
+
+my @cmd_output = `$cmd`;
+$cmd_output[0] =~ m/\s+(.*)$/;
+
+# prepare the date string
+my $date = $1;
+$date =~ s/Not\ After\ \:\ //;
+$date =~ s/\ GMT//;
+
+chomp($date);
+
+print("$date\n");
+# get unix epoc seconds
+my $unix_expiration_date=&UnixDate($date,'%s');
+my $unix_current_date=&UnixDate("today",'%s');
+
+my $time_difference = $unix_expiration_date - $unix_current_date;
+
+print("Date: $unix_expiration_date\n");
+print("UDate: $unix_current_date\n");
+print("EDate: $time_difference\n");
+print("TDate: $max_differential_seconds\n");
+
+if($time_difference > $max_differential_seconds){
+	print("good");
+	exit($ERRORS{'OK'});
+}else{
+	print("going bad");
+	exit($ERRORS{'CRITICAL'});
+}
