@@ -1,5 +1,6 @@
 #!/bin/bash
 #Author: Sam Gleske
+#Origin: https://github.com/sag47/drexel-university/
 #Description:
 #  Check your public IP Address rather than your private.
 curl http://checkip.dyndns.org/ 2> /dev/null | sed 's#.*<body>Current IP Address: \(.*\)</body>.*#\1#'

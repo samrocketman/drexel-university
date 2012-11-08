@@ -1,5 +1,6 @@
 #!/bin/bash
 #Author: Sam Gleske
+#Origin: https://github.com/sag47/drexel-university/
 #OpenSSL 1.0.1 14 Mar 2012
 #Description:
 #  Generate a key and a Certificate Signing request using the server name as the argument.

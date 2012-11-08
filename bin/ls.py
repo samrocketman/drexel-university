@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 #Author: Sam Gleske
+#Origin: https://github.com/sag47/drexel-university/
 #Thu Nov  8 10:13:27 EST 2012
 #Python 2.7.3
 #Description: Speed up the listing of a directory when there are too many files for ls to handle.
