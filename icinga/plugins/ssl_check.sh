@@ -38,7 +38,7 @@ fi
 
 #processing
 if [ "$1" = "-f" ];then
-  ssl_exp_date=$(openssl x509 -text -in $2 | grep 'Not After' | sed 's/Not After : //;' | sed 's/^ *//')
+  ssl_exp_date="$(openssl x509 -text -in $2 | grep 'Not After' | sed 's/Not After : //;' | sed 's/^ *//')"
 else #run a timeout of 3 seconds for the openssl command
   ssl_exp_date="$(timeout 3 openssl s_client -connect $1 2>/dev/null < /dev/null | sed -ne '/-BEGIN CERTIFICATE-/,/-END CERTIFICATE-/p' | openssl x509 -text | grep 'Not After' | sed 's/Not After : //;' | sed 's/^ *//')"
 fi
