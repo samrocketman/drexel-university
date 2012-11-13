@@ -85,42 +85,42 @@ if [ -f /etc/rc.d/init.d/functions ]; then
 fi
 
 start() {
-    cd $TOMCAT_HOME/bin
-    echo "TOMCAT_CMD_START = $TOMCAT_CMD_START"
-    
-    if [ -z "$SUBIT" ]; then
-        echo "$TOMCAT_CMD_START >${TOMCAT_CONSOLE} 2>&1 &"
-        eval $TOMCAT_CMD_START >${TOMCAT_CONSOLE} 2>&1 &
-    else
-        echo "$SUBIT \"$TOMCAT_CMD_START >${TOMCAT_CONSOLE} 2>&1\" &"
-        $SUBIT "$TOMCAT_CMD_START >${TOMCAT_CONSOLE} 2>&1" &
-    fi
+  cd $TOMCAT_HOME/bin
+  echo "TOMCAT_CMD_START = $TOMCAT_CMD_START"
+  if [ -z "$SUBIT" ]; then
+    echo "$TOMCAT_CMD_START >${TOMCAT_CONSOLE} 2>&1 &"
+    eval $TOMCAT_CMD_START >${TOMCAT_CONSOLE} 2>&1 &
+  else
+    echo "$SUBIT \"$TOMCAT_CMD_START >${TOMCAT_CONSOLE} 2>&1\" &"
+    $SUBIT "$TOMCAT_CMD_START >${TOMCAT_CONSOLE} 2>&1" &
+  fi
 }
 
 wait() {
-    while true;do
-      pid=`ps aux | grep "^$TOMCAT_USER" | grep java | grep "$TOMCAT_HOME" | awk '{print $2}'`
-      if [ -z "$pid" ];then
-	return 0
-      else
-	sleep 1
-	echo -n "."
-      fi
-    done
+  while true;do
+    pid=`ps aux | grep "^$TOMCAT_USER" | grep java | grep "$TOMCAT_HOME" | awk '{print $2}'`
+    if [ -z "$pid" ];then
+      return 0
+    else
+      sleep 1
+      echo -n "."
+    fi
+  done
 }
 
 stop() {
-    #Sam's custom kill command for tomcat
-    kill -s 15 `ps aux | grep "^$TOMCAT_USER" | grep java | grep "$TOMCAT_HOME" | awk '{print $2}'` 2> /dev/null
-    if [ "$?" -eq "0" ];then
-        echo -n "Tomcat is stopping."
-	wait && success
-	echo ""
-    else
-        failure
-        echo "Tomcat not running..."
-    fi
+  #Sam's custom kill command for tomcat
+  kill -s 15 `ps aux | grep "^$TOMCAT_USER" | grep java | grep "$TOMCAT_HOME" | awk '{print $2}'` 2> /dev/null
+  if [ "$?" -eq "0" ];then
+    echo -n "Tomcat is stopping."
+    wait && success
+    echo ""
+    return 0
+  else
+    failure
+    echo "Tomcat not running..."
     return 1
+  fi
 
 }
 
@@ -143,20 +143,20 @@ restart() {
 }
 
 case "$1" in
-start)
+  start)
     start
     ;;
-stop)
+  stop)
     stop
     ;;
-restart)
+  restart)
     restart
     ;;
-status)
-    status java
+  status)
+    status
     ;;
-*)
-    echo "usage: $0 (start|stop|restart|help)"
+  *)
+    echo "usage: $0 (start|stop|restart|status|help)"
 esac
 
 #Test environment
