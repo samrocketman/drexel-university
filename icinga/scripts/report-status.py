@@ -12,10 +12,14 @@
 #Usage:
 #  report-status.py
 
-#Setup:
+#Requires:
 #  Requires nsca configured on icinga server and nsca-client
 #  installed on the host.
-#
+#Recommended:
+#  Nagios Plugins package (you will need to possibly update $PATH
+#  environment variable).
+
+#Setup:
 #  Create a user nsca on the system and move the script to
 #    /usr/local/sbin/
 #  Take ownership of report-status.py with
