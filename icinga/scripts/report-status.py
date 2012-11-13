@@ -13,6 +13,9 @@
 #  report-status.py
 
 #Setup:
+#  Requires nsca configured on icinga server and nsca-client
+#  installed on the host.
+#
 #  Create a user nsca on the system and move the script to
 #    /usr/local/sbin/
 #  Take ownership of report-status.py with
