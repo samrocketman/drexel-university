@@ -1,6 +1,68 @@
 #!/bin/sh
 #Created by Sam Gleske (sag47@drexel.edu)
+#Created Tue Dec  6 10:24:22 EST 2011
+#Description:
+#  Service script for Apache Tomcat
+#  chkconfig compatible
+#Usage:
+#  /etc/init.d/tomcat help
+#Dependencies:
+#  bash tomcat coreutils awk grep procps util-linux-ng
 
+##### User defined environment variable values (should be the only place needing modification)
+org="du"
+TOMCAT_HOME="/app/tomcat-$org"
+TOMCAT_USER="tomcat"
+
+##### Default environment variable values
+#define where tomcat is - this is the directory containing directories log, bin, conf etc
+TOMCAT_HOME=${TOMCAT_HOME:-"/app/tomcat"}
+#define the user under which tomcat will run, or use 'RUNASIS' to run as the current user (normally root)
+TOMCAT_USER=${TOMCAT_USER:-"RUNASIS"}
+#define what will be done with the console log
+TOMCAT_CONSOLE=${TOMCAT_CONSOLE:-"/dev/null"}
+#Command to start tomcat
+TOMCAT_CMD_START=${TOMCAT_CMD_START:-"$TOMCAT_HOME/bin/startup.sh"}
+#make sure java is installed
+JAVA_HOME=${JAVA_HOME:-"/app/java"}
+#make sure java is in your path
+JAVAPTH=${JAVAPTH:-"/app/java/bin"}
+
+##### Run environment variable pre-flight tests
+if [ "$TOMCAT_USER" = "RUNASIS" ]; then
+  SUBIT=""
+else
+  if [ -n "`grep "$TOMCAT_USER" /etc/passwd`" ];then
+    SUBIT="su - $TOMCAT_USER -c "
+  else
+    echo "SERVICE CFG ERR: TOMCAT_USER = $TOMCAT_USER does not exist in /etc/passwd."
+    exit 1
+  fi
+fi
+
+if [ -n "$TOMCAT_CONSOLE" -a ! -d "$TOMCAT_CONSOLE" ]; then
+  # ensure the file exists
+  touch $TOMCAT_CONSOLE
+  if [ ! -z "$SUBIT" ]; then
+    chown $TOMCAT_USER $TOMCAT_CONSOLE
+  fi 
+else
+  echo "SERVICE CONFIG ERR: TOMCAT_CONSOLE = $TOMCAT_CONSOLE is already existing as a directory."
+  exit 1
+fi
+
+if [ -z "`echo $PATH | grep $JAVAPTH`" ]; then
+  PATH="$PATH:$JAVAPTH"
+fi
+
+if [ ! -d "$TOMCAT_HOME" ]; then
+  echo "SERVICE CFG ERR: TOMCAT_HOME = $TOMCAT_HOME does not exist as a valid directory."
+  exit 1
+fi
+
+export PATH TOMCAT_HOME JAVA_HOME
+
+##### Daemon service bits
 # chkconfig: 2345 80 80
 # description: starts tomcat
 
@@ -13,113 +75,96 @@
 ### END INIT INFO
 
 # source function library
+if [ -f /lib/lsb/init-functions ]; then
+  #Ubuntu
+. /lib/lsb/init-functions
+fi
 if [ -f /etc/rc.d/init.d/functions ]; then
+  #RedHat
 . /etc/rc.d/init.d/functions
 fi
 
-if [ -f /lib/lsb/init-functions ]; then
-. /lib/lsb/init-functions
-fi
-
-#define where jboss is - this is the directory containing directories log, bin, conf etc
-TOMCAT_HOME=${TOMCAT_HOME:-"/app/tomcat"}
-
-#define the user under which jboss will run, or use 'RUNASIS' to run as the current user
-TOMCAT_USER=${TOMCAT_USER:-"tomcat"}
-
-#make sure java is in your path
-JAVAPTH=${JAVAPTH:-"/app/java/bin"}
-
-#Command to start tomcat
-TOMCAT_CMD_START="$TOMCAT_HOME/bin/startup.sh"
-
-if [ "$TOMCAT_USER" = "RUNASIS" ]; then
-  SUBIT=""
-else
-  SUBIT="su - $TOMCAT_USER -c "
-fi
-
-if [ -n "$TOMCAT_CONSOLE" -a ! -d "$TOMCAT_CONSOLE" ]; then
-  # ensure the file exists
-  touch $TOMCAT_CONSOLE
-  if [ ! -z "$SUBIT" ]; then
-    chown $TOMCAT_USER $TOMCAT_CONSOLE
-  fi 
-fi
-
-if [ -n "$TOMCAT_CONSOLE" -a ! -f "$TOMCAT_CONSOLE" ]; then
-  echo "WARNING: location for saving console log invalid: $TOMCAT_CONSOLE"
-  echo "WARNING: ignoring it and using /dev/null"
-  TOMCAT_CONSOLE="/dev/null"
-fi
-
-#define what will be done with the console log
-TOMCAT_CONSOLE=${TOMCAT_CONSOLE:-"/dev/null"}
-
-if [ -z "`echo $PATH | grep $JAVAPTH`" ]; then
-  export PATH=$PATH:$JAVAPTH
-fi
-
-if [ ! -d "$TOMCAT_HOME" ]; then
-  echo TOMCAT_HOME does not exist as a valid directory : $TOMCAT_HOME
-  exit 1
-fi
-
-#custom functions added by Sam
 start() {
-  cd $TOMCAT_HOME/bin
-  echo TOMCAT_CMD_START = $TOMCAT_CMD_START
-  if [ -z "$SUBIT" ]; then
-    eval $TOMCAT_CMD_START >${TOMCAT_CONSOLE} 2>&1 &
-  else
-    $SUBIT "$TOMCAT_CMD_START >${TOMCAT_CONSOLE} 2>&1 &" 
-  fi
+    cd $TOMCAT_HOME/bin
+    echo "TOMCAT_CMD_START = $TOMCAT_CMD_START"
+    
+    if [ -z "$SUBIT" ]; then
+        echo "$TOMCAT_CMD_START >${TOMCAT_CONSOLE} 2>&1 &"
+        eval $TOMCAT_CMD_START >${TOMCAT_CONSOLE} 2>&1 &
+    else
+        echo "$SUBIT \"$TOMCAT_CMD_START >${TOMCAT_CONSOLE} 2>&1\" &"
+        $SUBIT "$TOMCAT_CMD_START >${TOMCAT_CONSOLE} 2>&1" &
+    fi
 }
 
 wait() {
-  while true;do
-    pid=`ps aux | grep "^$TOMCAT_USER" | grep java | awk '{print $2}'`
-    if [ -z $pid ];then
-      return 0
-    else
-      sleep 1
-      echo -n "."
-    fi
-  done
+    while true;do
+      pid=`ps aux | grep "^$TOMCAT_USER" | grep java | grep "$TOMCAT_HOME" | awk '{print $2}'`
+      if [ -z "$pid" ];then
+	return 0
+      else
+	sleep 1
+	echo -n "."
+      fi
+    done
 }
 
 stop() {
-  #Sam's custom kill command for tomcat
-  kill -s 15 `ps aux | grep "^$TOMCAT_USER" | grep java | awk '{print $2}'` 2> /dev/null
-  if [ "$?" -eq "0" ];then
-    echo -n "Tomcat is stopping."
-    wait && success
-    echo ""
+    #Sam's custom kill command for tomcat
+    kill -s 15 `ps aux | grep "^$TOMCAT_USER" | grep java | grep "$TOMCAT_HOME" | awk '{print $2}'` 2> /dev/null
+    if [ "$?" -eq "0" ];then
+        echo -n "Tomcat is stopping."
+	wait && success
+	echo ""
+    else
+        failure
+        echo "Tomcat not running..."
+    fi
+    return 1
+
+}
+
+status() {
+  #overwrite the default status function
+  pid=`ps aux | grep "^$TOMCAT_USER" | grep java | grep "$TOMCAT_HOME" | awk '{print $2}'`
+  if [ -n "$pid" ];then
+    base="`awk 'BEGIN { FS = "\0" }; {print $1}' /proc/$pid/cmdline`"
+    echo "Tomcat $base (pid = $pid) is running..."
+    return 0
   else
-    failure
-    echo "Tomcat not running..."
+    echo "Tomcat is stopped"
+    return 1
   fi
 }
 
 restart() {
-  stop
-  start
+    stop
+    start
 }
 
 case "$1" in
-  start)
+start)
     start
     ;;
-  stop)
+stop)
     stop
     ;;
-  restart)
+restart)
     restart
     ;;
-  status)
+status)
     status java
     ;;
-  *)
-    echo "usage: $0 (start|stop|restart|status|help)"
+*)
+    echo "usage: $0 (start|stop|restart|help)"
 esac
 
+#Test environment
+#Red Hat Enterprise Linux Server release 6.2 (Santiago)
+#GNU bash, version 4.1.2(1)-release (x86_64-redhat-linux-gnu)
+#coreutils.x86_64 8.4-19.el6
+#apache-tomcat-6.0.35
+#GNU Awk 3.1.7
+#GNU grep 2.6.3
+#procps version 3.2.8
+#util-linux-ng.x86_64 2.17.2-12.7.el6_3
