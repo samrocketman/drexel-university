@@ -15,8 +15,6 @@
 #
 #Required Packages: bash, coreutils, grep, sed, openssl
 
-
-
 #values are in days
 expire_warning=30
 expire_critical=14
@@ -41,7 +39,7 @@ fi
 
 #processing
 if [ "$1" = "-f" ];then
-  ssl_exp_date="$(openssl x509 -text -in $2 2>/dev/null | grep 'Not After' | sed 's/Not After : //' | sed 's/^ *//')"
+  ssl_exp_date="$(openssl x509 -text -in $2 2>/dev/null | grep 'Not After' | sed 's/^ *Not After *: *//')"
   #test for successful certificate
   openssl x509 -text -in $2 1>/dev/null 2>&1
   if [ ! "$?" = "0" ];then
@@ -49,7 +47,7 @@ if [ "$1" = "-f" ];then
     exit $UNKNOWN
   fi
 else #run a timeout of 3 seconds for the openssl command
-  ssl_exp_date="$(timeout 3 openssl s_client -connect $1 2>/dev/null < /dev/null | sed -ne '/-BEGIN CERTIFICATE-/,/-END CERTIFICATE-/p' | openssl x509 -text 2>/dev/null | grep 'Not After' | sed 's/Not After : //' | sed 's/^ *//')"
+  ssl_exp_date="$(timeout 3 openssl s_client -connect $1 2>/dev/null < /dev/null | openssl x509 -text 2>/dev/null | grep 'Not After' | sed 's/^ *Not After *: *//')"
   #test for successful certificate
   openssl s_client -connect $1 </dev/null 2>/dev/null | openssl x509 -text 1>/dev/null 2>&1
   if [ ! "$?" = "0" ];then
