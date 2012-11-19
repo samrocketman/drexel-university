@@ -4,14 +4,6 @@
 #The MIT License
 #Copyright (c) 2012 Samuel Gleske, Drexel University
 #
-#Tested Environment:
-#  Ubuntu 12.04.1 LTS Linux 3.2.0-32-generic x86_64 GNU/Linux
-#  GNU bash, version 4.2.24(1)-release (x86_64-pc-linux-gnu)
-#  GNU coreutils 8.13-3ubuntu3.1
-#  GNU sed version 4.2.1
-#  grep (GNU grep) 2.10
-#  OpenSSL 1.0.1 14 Mar 2012
-#
 #Description:
 #  This simple script checks the expiration of an SSL Certificate.
 #  If the cert is within 30 days of expiration there will be an Icinga warning.
@@ -49,9 +41,21 @@ fi
 
 #processing
 if [ "$1" = "-f" ];then
-  ssl_exp_date="$(openssl x509 -text -in $2 | grep 'Not After' | sed 's/Not After : //;' | sed 's/^ *//')"
+  ssl_exp_date="$(openssl x509 -text -in $2 2>/dev/null | grep 'Not After' | sed 's/Not After : //' | sed 's/^ *//')"
+  #test for successful certificate
+  openssl x509 -text -in $2 1>/dev/null 2>&1
+  if [ ! "$?" = "0" ];then
+    echo "UNKNOWN - $(openssl x509 -text -in $2 2>&1 1>/dev/null | head -n1)"
+    exit $UNKNOWN
+  fi
 else #run a timeout of 3 seconds for the openssl command
-  ssl_exp_date="$(timeout 3 openssl s_client -connect $1 2>/dev/null < /dev/null | sed -ne '/-BEGIN CERTIFICATE-/,/-END CERTIFICATE-/p' | openssl x509 -text | grep 'Not After' | sed 's/Not After : //;' | sed 's/^ *//')"
+  ssl_exp_date="$(timeout 3 openssl s_client -connect $1 2>/dev/null < /dev/null | sed -ne '/-BEGIN CERTIFICATE-/,/-END CERTIFICATE-/p' | openssl x509 -text 2>/dev/null | grep 'Not After' | sed 's/Not After : //' | sed 's/^ *//')"
+  #test for successful certificate
+  openssl s_client -connect $1 </dev/null 2>/dev/null | openssl x509 -text 1>/dev/null 2>&1
+  if [ ! "$?" = "0" ];then
+    echo "UNKNOWN - $(openssl s_client -connect $1 </dev/null 2>/dev/null | openssl x509 -text 2>&1 1>/dev/null | head -n1)"
+    exit $UNKNOWN
+  fi
 fi
 time_left_in_seconds=$(( $(date -d "$ssl_exp_date" +%s) - $(date +%s) ))
 warn_val=$(( $expire_warning*24*3600 ))
@@ -68,3 +72,11 @@ else
   echo "OK - Cert Expires $(date -d "$ssl_exp_date")"
   exit $OK
 fi
+
+#Tested Environment:
+#  Ubuntu 12.04.1 LTS Linux 3.2.0-32-generic x86_64 GNU/Linux
+#  GNU bash, version 4.2.24(1)-release (x86_64-pc-linux-gnu)
+#  GNU coreutils 8.13-3ubuntu3.1
+#  GNU sed version 4.2.1
+#  grep (GNU grep) 2.10
+#  OpenSSL 1.0.1 14 Mar 2012
