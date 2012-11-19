@@ -49,9 +49,9 @@ if [ "$1" = "-f" ];then
 else #run a timeout of 3 seconds for the openssl command
   ssl_exp_date="$(timeout 3 openssl s_client -connect $1 2>/dev/null < /dev/null | openssl x509 -text 2>/dev/null | grep 'Not After' | sed 's/^ *Not After *: *//')"
   #test for successful certificate
-  openssl s_client -connect $1 </dev/null 2>/dev/null | openssl x509 -text 1>/dev/null 2>&1
+  timeout 3 openssl s_client -connect $1 </dev/null 2>/dev/null | openssl x509 -text 1>/dev/null 2>&1
   if [ ! "$?" = "0" ];then
-    echo "UNKNOWN - $(openssl s_client -connect $1 </dev/null 2>/dev/null | openssl x509 -text 2>&1 1>/dev/null | head -n1)"
+    echo "UNKNOWN - $(timeout 3 openssl s_client -connect $1 </dev/null 2>/dev/null | openssl x509 -text 2>&1 1>/dev/null | head -n1)"
     exit $UNKNOWN
   fi
 fi
