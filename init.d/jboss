@@ -1,86 +1,103 @@
 #!/bin/sh
 #Created by Sam Gleske (sag47@drexel.edu)
+#Created Tue Dec  6 10:24:22 EST 2011
+#Description:
+#  Service script for RedHat JBoss
+#  chkconfig compatible
+#Usage:
+#  /etc/init.d/jboss help
+#Dependencies:
+#  bash jboss coreutils awk grep procps util-linux-ng
 
+##### User defined environment variable values (should be the only place needing modification)
+JBOSS_USER="jboss"
+JBOSS_CMD_START="/app/jboss/bin/startJboss.sh"
+
+##### Default environment variable values
+#define where tomcat is - this is the directory containing directories log, bin, conf etc
+JBOSS_HOME=${JBOSS_HOME:-"/app/jboss"}
+#define the user under which tomcat will run, or use 'RUNASIS' to run as the current user (normally root)
+JBOSS_USER=${JBOSS_USER:-"RUNASIS"}
+#define what will be done with the console log
+JBOSS_CONSOLE=${JBOSS_CONSOLE:-"/dev/null"}
+#Command to start tomcat
+JBOSS_CMD_START=${JBOSS_CMD_START:-"$JBOSS_HOME/bin/run.sh -b 0.0.0.0"}
+#make sure java is installed
+JAVA_HOME=${JAVA_HOME:-"/app/java"}
+#make sure java is in your path
+JAVAPTH=${JAVAPTH:-"$JAVA_HOME/bin"}
+
+##### Run environment variable pre-flight tests
+if [ "$JBOSS_USER" = "RUNASIS" ]; then
+  SUBIT=""
+else
+  if [ -n "`grep "$JBOSS_USER" /etc/passwd`" ];then
+    SUBIT="su - $JBOSS_USER -c "
+  else
+    echo "SERVICE CFG ERR: JBOSS_USER = $JBOSS_USER does not exist in /etc/passwd."
+    exit 1
+  fi
+fi
+
+if [ -n "$JBOSS_CONSOLE" -a ! -d "$JBOSS_CONSOLE" ]; then
+  # ensure the file exists
+  touch $JBOSS_CONSOLE
+  if [ ! -z "$SUBIT" ]; then
+    chown $JBOSS_USER $JBOSS_CONSOLE
+  fi 
+else
+  echo "SERVICE CONFIG ERR: JBOSS_CONSOLE = $JBOSS_CONSOLE is already existing as a directory."
+  exit 1
+fi
+
+if [ -z "`echo $PATH | grep $JAVAPTH`" ]; then
+  PATH="$PATH:$JAVAPTH"
+fi
+
+if [ ! -d "$JBOSS_HOME" ]; then
+  echo "SERVICE CFG ERR: JBOSS_HOME = $JBOSS_HOME does not exist as a valid directory."
+  exit 1
+fi
+
+export PATH JBOSS_HOME JAVA_HOME
+
+##### Daemon service bits
 # chkconfig: 2345 80 80
-# description: starts JBoss
+# description: starts jboss
 
 ### BEGIN INIT INFO
 # Provides: jboss
 # Required-Start: $network
 # Defalt-Start: 2 3 4 5
 # Default-Stop: 0 1 6
-# Description: starts JBoss
+# Description: starts jboss
 ### END INIT INFO
 
 # source function library
+if [ -f /lib/lsb/init-functions ]; then
+  #Ubuntu
+. /lib/lsb/init-functions
+fi
 if [ -f /etc/rc.d/init.d/functions ]; then
+  #RedHat
 . /etc/rc.d/init.d/functions
 fi
 
-if [ -f /lib/lsb/init-functions ]; then
-. /lib/lsb/init-functions
-fi
-
-#define where jboss is - this is the directory containing directories log, bin, conf etc
-JBOSS_HOME=${JBOSS_HOME:-"/app/jboss"}
-
-#define the user under which jboss will run, or use 'RUNASIS' to run as the current user
-JBOSS_USER=${JBOSS_USER:-"jboss"}
-
-#make sure java is in your path
-JAVAPTH=${JAVAPTH:-"/app/java/bin"}
-
-#Command to start jboss; recommended to change the default binding and profile
-JBOSS_CMD_START="$JBOSS_HOME/bin/run.sh -b 0.0.0.0"
-
-#define what will be done with the console log
-JBOSS_CONSOLE=${JBOSS_CONSOLE:-"/dev/null"}
-
-if [ "$JBOSS_USER" = "RUNASIS" ]; then
-  SUBIT=""
-else
-  SUBIT="su - $JBOSS_USER -c "
-fi
-
-if [ -n "$JBOSS_CONSOLE" -a ! -d "$JBOSS_CONSOLE" ]; then
-  if [ ! "$JBOSS_CONSOLE" = "/dev/null" ];then
-    # ensure the file exists
-    touch $JBOSS_CONSOLE
-    if [ ! -z "$SUBIT" ]; then
-      chown $JBOSS_USER $JBOSS_CONSOLE
-    fi 
-  fi
-fi
-
-#if [ -n "$JBOSS_CONSOLE" -a ! -f "$JBOSS_CONSOLE" ]; then
-#  echo "WARNING: location for saving console log invalid: $JBOSS_CONSOLE"
-#  echo "WARNING: ignoring it and using /dev/null"
-#  JBOSS_CONSOLE="/dev/null"
-#fi
-
-if [ -z "`echo $PATH | grep $JAVAPTH`" ]; then
-  export PATH=$PATH:$JAVAPTH
-fi
-
-if [ ! -d "$JBOSS_HOME" ]; then
-  echo "JBOSS_HOME does not exist as a valid directory : $JBOSS_HOME"
-  exit 1
-fi
-
-#custom functions added by Sam
 start() {
   cd $JBOSS_HOME/bin
-  echo JBOSS_CMD_START = $JBOSS_CMD_START
+  echo "JBOSS_CMD_START = $JBOSS_CMD_START"
   if [ -z "$SUBIT" ]; then
+    echo "$JBOSS_CMD_START >${JBOSS_CONSOLE} 2>&1 &"
     eval $JBOSS_CMD_START >${JBOSS_CONSOLE} 2>&1 &
   else
-    $SUBIT "$JBOSS_CMD_START >${JBOSS_CONSOLE} 2>&1 &" 
+    echo "$SUBIT \"$JBOSS_CMD_START >${JBOSS_CONSOLE} 2>&1\" &"
+    $SUBIT "$JBOSS_CMD_START >${JBOSS_CONSOLE} 2>&1" &
   fi
 }
 
 wait() {
   while true;do
-    pid=`ps aux | awk '($1 == "'$JBOSS_USER'") && ($0 ~ /java/) {print $2}'`
+    pid=`ps aux | grep "^$JBOSS_USER" | grep java | grep "$JBOSS_HOME" | awk '{print $2}'`
     if [ -z "$pid" ];then
       return 0
     else
@@ -91,22 +108,37 @@ wait() {
 }
 
 stop() {
-  #Sam's custom kill command for jboss
-  kill -s 15 `ps aux | awk '($1 == "'$JBOSS_USER'") && ($0 ~ /java/) {print $2}'` 2> /dev/null
+  #Sam's custom kill command for tomcat
+  kill -s 15 `ps aux | grep "^$JBOSS_USER" | grep java | grep "$JBOSS_HOME" | awk '{print $2}'` 2> /dev/null
   if [ "$?" -eq "0" ];then
     echo -n "JBoss is stopping."
     wait && success
     echo ""
+    return 0
   else
     failure
     echo "JBoss not running..."
+    return 1
   fi
 
 }
 
+status() {
+  #overwrite the default status function
+  pid=`ps aux | grep "^$JBOSS_USER" | grep java | grep "$JBOSS_HOME" | awk '{print $2}'`
+  if [ -n "$pid" ];then
+    base="`awk 'BEGIN { FS = "\0" }; {print $1}' /proc/$pid/cmdline`"
+    echo "JBoss $base (pid = $pid) is running..."
+    return 0
+  else
+    echo "JBoss is stopped."
+    return 1
+  fi
+}
+
 restart() {
-  stop
-  start
+    stop
+    start
 }
 
 case "$1" in
@@ -120,9 +152,18 @@ case "$1" in
     restart
     ;;
   status)
-    status java
+    status
     ;;
   *)
     echo "usage: $0 (start|stop|restart|status|help)"
 esac
 
+#Test environment
+#Red Hat Enterprise Linux Server release 6.2 (Santiago)
+#GNU bash, version 4.1.2(1)-release (x86_64-redhat-linux-gnu)
+#coreutils.x86_64 8.4-19.el6
+#apache-tomcat-6.0.35
+#GNU Awk 3.1.7
+#GNU grep 2.6.3
+#procps version 3.2.8
+#util-linux-ng.x86_64 2.17.2-12.7.el6_3
