@@ -44,6 +44,62 @@ import sys
 import locale
 locale.setlocale(locale.LC_ALL, '') 
 
+#help documentation
+if len(sys.argv) > 1 and (sys.argv[1] == "-h" or sys.argv[1] == "--help"):
+  print """
+NAME:
+    wasted-ram-updates.py - discovers programs with open file handles to 
+                            deleted files.
+
+SYNOPSIS:
+    wasted-ram-updates.py [OPTIONS]
+
+DESCRIPTION:
+    The purpose of this script is to safely determine which services should
+    be restarted after updating many packages on a server.
+
+    Note that a few entries in this list are "normal" e.g. a program opens a
+    file for temporary storage, and then deletes it (but keeps the handle),
+    but most will indicate a process that needs to be restarted to reload
+    files from a new package.
+
+OPTIONS:
+    By default executing this program with no arguments will organize the
+    output by file handle to deleted file.
+
+    -h, --help
+        show this help documentation
+
+    pids
+        Organize the output by PID
+
+    summary
+        Only displays summary information.
+
+EXAMPLES:
+    wasted-ram-updates.py
+        Run with default behavior.  This will group by file name.
+
+    wasted-ram-updates.py pids
+        Group output by pids so that you can see which files the process 
+        has open.
+
+    wasted-ram-updates.py summary
+        Only show a summary.
+
+AUTHORS:
+    Written by James Antill <james.antill@redhat.com>
+    Contributors:
+        Sam Gleske <sag47@drexel.edu>
+
+LINKS:
+    Source 1:
+        http://www.redhat.com/archives/rhl-list/2009-July/msg00228.html
+    Source 2:
+        http://markmail.org/message/dodinyrhwgey35mh
+"""
+  sys.exit(0)
+
 def loc_num(x):
     """ Return a string of a number in the readable "locale" format. """
     return locale.format("%d", int(x), True)
