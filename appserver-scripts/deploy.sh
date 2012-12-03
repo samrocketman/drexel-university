@@ -33,7 +33,7 @@ export PATH="$PATH:/bin"
 
 ########### CONFIGURATION
 #cd to the staging directory where files to be deployed are kept;the working directory must be the staging area
-cd /opt/staging
+cd ${stage:-/opt/staging}
 #jboss profile for app server
 jbossprofile=${jbossprofile:-/opt/jboss/server/default}
 # deploy directory (relative to $jbossprofile)
