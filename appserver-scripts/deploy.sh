@@ -41,15 +41,15 @@ deploydir="deploy"
 # lib directory (relative to $jbossprofile)
 libdir="lib"
 #backup copies for deployments
-backupdir=/opt/jboss/server/backup
+backupdir=${backupdir:-/opt/jboss/server/backup}
 #war files to deploy to deploy directory
 war_files="something1.war something2.war"
 #jar files to deploy to lib directory
 lib_files="something1.jar something2.jar"
 #path to init.d service script
-initd_script=/etc/init.d/jboss
+initd_script=${initd_script:-/etc/init.d/jboss}
 #force JBoss restart every time (0=allow hot deploy, 1=force a restart)
-force_restart=0
+force_restart=${force_restart:-0}
 ########### END CONFIGURATION
 
 #run through tests and determine what to deploy (or fail if none)
