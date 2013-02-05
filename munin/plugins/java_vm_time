@@ -1,7 +1,4 @@
 #!/bin/bash
-#Author: Chris Holcombe
-#parsegarbagelogs.py located at https://github.com/sag47/drexel-university/tree/master/icinga/plugins/jvm_health/
-
 
 #A plugin to send jvm statistics to munin for graphing
 
@@ -11,10 +8,12 @@ PYTHON_FILE=/usr/local/sbin/parsegarbagelogs.py
 MEM_GRAPH="java_graph"
 TIME_GRAPH="java_vm_time"
 UPTIME_GRAPH="java_vm_uptime"
+THREAD_GRAPH="java_vm_threads"
 BASENAME=`basename $0`
 
 if [ "$BASENAME" = "$MEM_GRAPH" ]; then
     if [ "$1" = "config" ]; then
+        echo "graph_category JVM statistics"
         echo "graph_title JVM Memory usage"
         echo "graph_order S O P"
         echo "graph_vlabel usage"
@@ -38,6 +37,7 @@ if [ "$BASENAME" = "$MEM_GRAPH" ]; then
     fi
 elif [ "$BASENAME" = "$TIME_GRAPH" ]; then
     if [ "$1" = "config" ]; then
+        echo "graph_category JVM statistics"
         echo "graph_title JVM Garbage Collection Time Spent"
         echo "graph_order YGC_Time FGC_Time TGC_Time Uptime"
         echo "graph_vlabel time"
@@ -61,6 +61,7 @@ elif [ "$BASENAME" = "$TIME_GRAPH" ]; then
     fi
 elif [ "$BASENAME" = "$UPTIME_GRAPH" ]; then
     if [ "$1" = "config" ]; then
+        echo "graph_category JVM statistics"
         echo "graph_title JVM Uptime"
         echo "graph_order Uptime"
         echo "graph_vlabel time"
@@ -78,4 +79,72 @@ elif [ "$BASENAME" = "$UPTIME_GRAPH" ]; then
         echo "Couldn't find sql db file"
         exit -1
     fi
+elif [ "$BASENAME" = "$THREAD_GRAPH" ]; then
+    if [ "$1" = "config" ]; then
+        echo "graph_category JVM statistics"
+        echo "graph_title JVM Thread States (tomcat-du)"
+        echo "graph_order TD_Total TD_Waiting TD_TWaiting TD_Runnable TD_New TD_Blocked TD_Terminated"
+        echo "graph_vlabel time"
+        echo "time.label Time"
+        echo "graph_info This graph shows thread states statistics from a jstack thread dump for the tomcat-du JVM."
+        echo "graph_scale no"
+        echo "TD_Total.label TOTAL"
+        echo "TD_New.label NEW"
+        echo "TD_Runnable.label RUNNABLE"
+        echo "TD_Blocked.label BLOCKED"
+        echo "TD_Waiting.label WAITING"
+        echo "TD_TWaiting.label TIMED_WAITING"
+        echo "TD_Terminated.label TERMINATED"
+        exit 0
+    fi
+    #GATHER DATA USING AWK SCRIPT
+    org="du"
+    TOMCAT_HOME="/app/tomcat-$org"
+    TOMCAT_USER="tomcat"
+    JAVA_HOME="/app/java"
+    pid=$(ps aux | grep "^$TOMCAT_USER" | grep java | grep "$TOMCAT_HOME" | awk '{print $2}')
+    #NOTE! Due to a delay with dumping threads one might need to dump the threads
+    #to a temporary file and then use the cat command to get the output for the awk script.
+    #Set the thread dump job in cron and just parse the /tmp file.
+    DATA="$(su - $TOMCAT_USER -c "$JAVA_HOME/bin/jstack $pid" | awk '
+BEGIN {
+  total=0;
+  new=0;
+  runnable=0;
+  blocked=0;
+  waiting=0;
+  timed_waiting=0;
+  terminated=0;
+};
+$0 ~ /java.lang.Thread.State/ {
+  total=total+1;
+  if($2 == "NEW") {
+    new=new+1;
+  }
+  if($2 == "RUNNABLE") {
+    runnable=runnable+1;
+  }
+  if($2 == "BLOCKED") {
+    blocked=blocked+1;
+  }
+  if($2 == "WAITING") {
+    waiting=waiting+1;
+  }
+  if($2 == "TIMED_WAITING") {
+    timed_waiting=timed_waiting+1;
+  }
+  if($2 == "TERMINATED") {
+    terminated=terminated+1;
+  }
+};
+END{print total,new,runnable,blocked,waiting,timed_waiting,terminated}
+    ')"
+    #END OF AWK SCRIPT DATA GATHERING
+    echo "TD_Total.value `echo "$DATA" | cut -d ' ' -f 1`"
+    echo "TD_New.value `echo "$DATA" | cut -d ' ' -f 2`"
+    echo "TD_Runnable.value `echo "$DATA" | cut -d ' ' -f 3`"
+    echo "TD_Blocked.value `echo "$DATA" | cut -d ' ' -f 4`"
+    echo "TD_Waiting.value `echo "$DATA" | cut -d ' ' -f 5`"
+    echo "TD_TWaiting.value `echo "$DATA" | cut -d ' ' -f 6`"
+    echo "TD_Terminated.value `echo "$DATA" | cut -d ' ' -f 7`"
 fi
