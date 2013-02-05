@@ -1,0 +1,77 @@
+#!/bin/bash
+# By Sam Gleske (sag47)
+# Created Tue Feb  5 10:20:31 EST 2013
+# Linux 2.6.18-194.11.4.el5 x86_64 GNU/Linux
+# GNU bash, version 3.2.25(1)-release (x86_64-redhat-linux-gnu)
+# GNU Awk 3.1.5
+#
+# live_trend info
+# This live_trend program samples every second.
+# This program will not output if the current second sample is the same as the last second sample.
+# That way only unique entries with associated timestamps will be output.
+# All proceeding timestamp entries not output are assumed to be the same value as the current timestamp value.
+#
+# thread_dump_count_live_trend info
+# This trending program counts up the threads on a jvm and displays a sum.
+# You configure some of the variables for the specific user you wish to analyze. See # CONFIGURE VARIABLES section
+# Documentation on thread states.
+#  http://docs.oracle.com/javase/1.5.0/docs/api/java/lang/Thread.State.html
+# Output format
+#     Thread breakdown = ## ## ## ## ## ## ##; local date and time in human readable format; date in seconds since 1970-01-01 00:00:00 UTC
+
+# CONFIGURE VARIABLES
+org="du"
+TOMCAT_HOME="/app/tomcat-$org"
+TOMCAT_USER="tomcat"
+JAVA_HOME="/app/java"
+
+# END CONFIGURE VARIABLES
+pid=$(ps aux | grep "^$TOMCAT_USER" | grep java | grep "$TOMCAT_HOME" | awk '{print $2}')
+
+while true;do
+
+#GATHER DATA USING AWK SCRIPT
+data="$(su - $TOMCAT_USER -c "$JAVA_HOME/bin/jstack $pid" | awk '
+BEGIN {
+  total=0;
+  new=0;
+  runnable=0;
+  blocked=0;
+  waiting=0;
+  timed_waiting=0;
+  terminated=0;
+};
+$0 ~ /java.lang.Thread.State/ {
+  total=total+1;
+  if($2 == "NEW") {
+    new=new+1;
+  }
+  if($2 == "RUNNABLE") {
+    runnable=runnable+1;
+  }
+  if($2 == "BLOCKED") {
+    blocked=blocked+1;
+  }
+  if($2 == "WAITING") {
+    waiting=waiting+1;
+  }
+  if($2 == "TIMED_WAITING") {
+    timed_waiting=timed_waiting+1;
+  }
+  if($2 == "TERMINATED") {
+    terminated=terminated+1;
+  }
+};
+END{FS=",";print total,new,runnable,blocked,waiting,timed_waiting,terminated}
+')"
+#END OF AWK SCRIPT
+
+  current="Thread breakdown = $data"
+  date=$(date '+%Y-%m-%d %I:%M:%S %p')
+  dates=$(date '+%s')
+  if [ "$current" != "$last" ];then
+    echo "$current; $date; $dates";
+  fi  
+  last=$current
+  sleep 5
+done
