@@ -60,8 +60,11 @@ warn_val=$(( $expire_warning*24*3600 ))
 crit_val=$(( $expire_critical*24*3600 ))
 
 #logic
-if [ "$time_left_in_seconds" -lt "$crit_val" ];then
+if [ "$time_left_in_seconds" -lt "0" ];then
   echo "CRITICAL - Cert Expired $(date -d "$ssl_exp_date")"
+  exit $CRITICAL
+elif [ "$time_left_in_seconds" -lt "$crit_val" ];then
+  echo "CRITICAL - Cert Expires $(date -d "$ssl_exp_date")"
   exit $CRITICAL
 elif [ "$time_left_in_seconds" -lt "$warn_val" ];then
   echo "WARNING - Cert Expires $(date -d "$ssl_exp_date")"
