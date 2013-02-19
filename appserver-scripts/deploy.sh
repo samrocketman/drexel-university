@@ -53,7 +53,7 @@ war_files="${war_files:-something1.war something2.war}"
 #jar files to deploy to lib directory
 lib_files="${lib_files:-something1.jar something2.jar}"
 #app server profile for app server
-appsprofile=${appsprofile:-/opt/jboss/server/default}
+appsprofile="${appsprofile:-/opt/jboss/server/default}"
 #app server user
 appsuser="${appsuser:-jboss}"
 # deploy directory (relative to $appsprofile)
