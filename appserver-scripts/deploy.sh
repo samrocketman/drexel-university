@@ -47,7 +47,7 @@ export PATH="$PATH:/bin"
 
 ########### DEFAULT CONFIGURATION
 #cd to the staging directory where files to be deployed are kept;the working directory must be the staging area
-cd ${stage:-/opt/staging}
+cd "${stage:-/opt/staging}"
 #war files to deploy to deploy directory
 war_files="${war_files:-something1.war something2.war}"
 #jar files to deploy to lib directory
@@ -61,9 +61,9 @@ deploydir="${deploydir:-deploy}"
 # lib directory (relative to $appsprofile)
 libdir="${libdir:-lib}"
 #backup copies for deployments
-backupdir=${backupdir:-/opt/jboss/server/backup}
+backupdir="${backupdir:-/opt/jboss/server/backup}"
 #path to init.d service script
-initd_script=${initd_script:-/etc/init.d/jboss}
+initd_script="${initd_script:-/etc/init.d/jboss}"
 #force JBoss restart every time (0=allow hot deploy, 1=force a restart)
 force_restart=${force_restart:-0}
 ########### END DEFAULT CONFIGURATION
@@ -147,7 +147,7 @@ function deploy_wars() {
 function deploy_libs() {
   for x in $lib_files;do
     if [ -e "$x" ];then
-      chown $appsuser\: "$x"
+      chown "$appsuser"\: "$x"
       chmod 644 "$x"
       mv -f "$x" "$appsprofile/$libdir/$x"
       touch "$appsprofile/$libdir/$x"
@@ -173,15 +173,15 @@ function backup_directories() {
 #check to see if server shutdown is required
 function conditional_shutdown() {
   if [ "$islib" = "1" ] || [ ! "$force_restart" = "0" -a ! "$force_restart" = "false" ];then
-    $initd_script stop
+    "$initd_script" stop
   fi
 }
 
 #check to see if server startup is required
 function conditional_startup() {
   if [ "$islib" = "1" ] || [ ! "$force_restart" = "0" -a ! "$force_restart" = "false" ];then
-    $initd_script start
-    sleep 2 && $initd_script status
+    "$initd_script" start
+    sleep 2 && "$initd_script" status
   fi
 }
 
