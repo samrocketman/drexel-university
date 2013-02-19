@@ -1,0 +1,52 @@
+# Created by Sam Gleske
+#
+# Deployment scheduler - this handles the details of an after hours deployment
+#                        must be compatible with /bin/sh
+#
+# Dependencies:
+#   deploy.sh - my application server deployment script
+#
+# Usage:
+#   Schedule a job to run at 5:30pm
+#     at 17:30 < schedule_deploy
+#   List and then delete a scheduled job number
+#     at -l
+#     atrm 2
+#
+
+#
+# Configuration Variables
+#
+rootdir="/opt/staging"
+dlog="$rootdir/deploy.log"
+email="some_email@domain.com"
+logs="/opt/jboss/server/default/log/server.log
+/opt/jboss/server/default/log/boot.log"
+
+#
+# Deployment Logic
+#
+
+echo "=== START DEPLOYMENT ==="
+date >> $dlog
+$rootdir/deploy.sh >> $dlog
+date >> $dlog
+echo "=== END DEPLOYMENT ==="
+cat $dlog | mail -s "deployment deploy.log" $email
+
+#
+# Mail Logs for analyzing 5 minutes after the deployment
+#
+
+function maillogs() {
+  for log in $logs;do
+    echo "sending mail deployment $(basename $log)"
+    if [ -f "$log" ];then
+      tail -n 5000 $log | mail -s "deployment $(basename $log)" $email
+    else
+      echo "ERROR $log file does not exist!" | mail -s "ERROR deployment $(basename $log)" $email
+    fi
+  done
+}
+
+sleep 300 && maillogs
