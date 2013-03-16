@@ -54,6 +54,7 @@ export PATH="${PATH}:/bin"
 #timeout=0
 #debug=false
 #dryrun=false
+#enable_colors=false
 ########### END USER CONFIGURATION
 
 ########### DEFAULT CONFIGURATION
@@ -87,32 +88,201 @@ timeout="${timeout:-0}"
 debug="${debug:-false}"
 #simulates a deployment without executing changes (true=simulate deployment, false=execute deployment)
 dryrun="${dryrun:-false}"
+#just some colored output eye candy in the terminal
+enable_colors="${enable_colors:-false}"
 ########### END DEFAULT CONFIGURATION
 
+#COLORS DOCUMENTATION
+# black - 30
+# red - 31
+# green - 32
+# brown - 33
+# blue - 34
+# magenta - 35
+# cyan - 36
+# lightgray - 37
+# 
+# * 'm' character at the end of each of the following sentences is used as a stop character, where the system should stop and parse the \033[ sintax.
+# 
+# \033[0m - is the default color for the console
+# \033[0;#m - is the color of the text, where # is one of the codes mentioned above
+# \033[1m - makes text bold
+# \033[1;#m - makes colored text bold**
+# \033[2;#m - colors text according to # but a bit darker
+# \033[4;#m - colors text in # and underlines
+# \033[7;#m - colors the background according to #
+# \033[9;#m - colors text and strikes it
+# \033[A - moves cursor one line above (carfull: it does not erase the previously written line)
+# \033[B - moves cursor one line under
+# \033[C - moves cursor one spacing to the right
+# \033[D - moves cursor one spacing to the left
+# \033[E - don't know yet
+# \033[F - don't know yet
+# 
+# \033[2K - erases everything written on line before this.
+
+#Colors variables
+SETCOLOR_GREEN="echo -en \\033[0;32m"
+SETCOLOR_RED="echo -en \\033[0;31m"
+SETCOLOR_YELLOW="echo -en \\033[0;33m"
+SETCOLOR_NORMAL="echo -en \\033[0;39m"
+SETSTYLE_BOLD="echo -en \\033[1m"
+SETSTYLE_UNDERLINE="echo -en \\033[4m"
+SETSTYLE_NORMAL="echo -en \\033[0m"
+
 #export environment variables
-export appsprofile appsuser backupdir debug deploydir dryrun force_restart initd_script libdir lib_files move_or_copy second_stage stage timeout war_files
+GLOBAL_VARS="appsprofile appsuser backupdir debug deploydir dryrun enable_colors force_restart initd_script libdir lib_files move_or_copy second_stage stage timeout war_files"
+export ${GLOBAL_VARS}
+
+#same as echo function except the whole text line is red
+function red_echo() {
+  #in order for the -n functionality to work properly $2 must be quoted when called in case of spaces
+  if "${enable_colors}";then
+    if [ "$1" = "-n" ];then
+      ${SETCOLOR_RED} && echo -n "$2" && ${SETCOLOR_NORMAL}
+    else
+      ${SETCOLOR_RED} && echo "$*" && ${SETCOLOR_NORMAL}
+    fi
+  else
+    if [ "$1" = "-n" ];then
+      echo -n "$2"
+    else
+      echo "$*"
+    fi
+  fi
+}
+
+#same as echo function except the whole text line is green
+function green_echo() {
+  #in order for the -n functionality to work properly $2 must be quoted when called in case of spaces
+  if "${enable_colors}";then
+    if [ "$1" = "-n" ];then
+      ${SETCOLOR_GREEN} && echo -n "$2" && ${SETCOLOR_NORMAL}
+    else
+      ${SETCOLOR_GREEN} && echo "$*" && ${SETCOLOR_NORMAL}
+    fi
+  else
+    if [ "$1" = "-n" ];then
+      echo -n "$2"
+    else
+      echo "$*"
+    fi
+  fi
+}
+
+#same as echo function except the whole text line is yellow
+function yellow_echo() {
+  #in order for the -n functionality to work properly $2 must be quoted when called in case of spaces
+  if "${enable_colors}";then
+    if [ "$1" = "-n" ];then
+      ${SETCOLOR_YELLOW} && echo -n "$2" && ${SETCOLOR_NORMAL}
+    else
+      ${SETCOLOR_YELLOW} && echo "$*" && ${SETCOLOR_NORMAL}
+    fi
+  else
+    if [ "$1" = "-n" ];then
+      echo -n "$2"
+    else
+      echo "$*"
+    fi
+  fi
+  return 0
+}
+
+#same as echo function except output bold text
+function bold_echo() {
+  #in order for the -n functionality to work properly $2 must be quoted when called in case of spaces
+  if "${enable_colors}";then
+    if [ "$1" = "-n" ];then
+      ${SETSTYLE_BOLD} && echo -n "$2" && ${SETSTYLE_NORMAL}
+    else
+      ${SETSTYLE_BOLD} && echo "$*" && ${SETSTYLE_NORMAL}
+    fi
+  else
+    if [ "$1" = "-n" ];then
+      echo -n "$2"
+    else
+      echo "$*"
+    fi
+  fi
+  return 0
+}
+
+#same as echo function except output underlined text
+function underline_echo() {
+  #in order for the -n functionality to work properly $2 must be quoted when called in case of spaces
+  if "${enable_colors}";then
+    if [ "$1" = "-n" ];then
+      ${SETSTYLE_UNDERLINE} && echo -n "$2" && ${SETSTYLE_NORMAL}
+    else
+      ${SETSTYLE_UNDERLINE} && echo "$*" && ${SETSTYLE_NORMAL}
+    fi
+  else
+    if [ "$1" = "-n" ];then
+      echo -n "$2"
+    else
+      echo "$*"
+    fi
+  fi
+  return 0
+}
+
+#reads stdin and highlights deploy specific environment variables
+function colorize_env() {
+  while read line;do
+    MATCH=0
+    for var in ${GLOBAL_VARS};do
+      if [ ! -z "$(echo "$line" | grep -e "^$var")" ];then
+        MATCH="${var}"
+        break
+      fi
+    done
+    if [ ! "${MATCH}" = "0" ];then
+      #$(eval "echo \$$var")
+      underline_echo -n "${MATCH}"
+      echo "=$(eval "echo \$${MATCH}")"
+    else
+      echo "$line"
+    fi
+  done
+}
 
 #show environment if debugging enabled
 function if_debug_print_environment() {
   if [ ! "${debug}" = "false" ];then
-    echo "== ENVIRONMENT VARIABLES =="
     echo ""
-    env
+    bold_echo "== ENVIRONMENT VARIABLES =="
+    if "${enable_colors}";then
+      echo "debug mode style:"
+      echo -n "  " && underline_echo -n "underlined text" && echo " is used to highlight env vars specific for deployment"
+    fi
     echo ""
-    echo "== EXECUTE DEPLOYMENT =="
+    env | colorize_env
+    echo ""
+    bold_echo "== EXECUTE DEPLOYMENT =="
+    if "${enable_colors}";then
+      echo "debug mode style:"
+      green_echo -n "  green text" && echo " is used to highlight normal stdout output"
+      yellow_echo -n "  yellow text" && echo " is used to highlight output which might be interesting"
+      red_echo -n "  red text" && echo " is used to highlight changes which affect the running system"
+    fi
+    echo ""
   fi
 }
+
 
 #run through tests and determine what to deploy (or fail if none)
 function preflight_check() {
   #START CRITICAL CHECKS (checks which are depended on by the preflight_check in itself)
+  #test debug environment variable (must be bool)
   if [ ! "${debug}" = "true" ] && [ ! "${debug}" = "false" ];then
-    echo "debug=${debug} is not a valid option for debug!  Must be true or false." > /dev/stderr
+    red_echo "debug=${debug} is not a valid option for debug!  Must be true or false." > /dev/stderr
     echo "Preflight test failed...  Aborting." > /dev/stderr
     return 1
   fi
+  #test dryrun environment variable (must be bool)
   if [ ! "${dryrun}" = "true" ] && [ ! "${dryrun}" = "false" ];then
-    echo "dryrun=${dryrun} is not a valid option for dryrun!  Must be true or false." > /dev/stderr
+    red_echo "dryrun=${dryrun} is not a valid option for dryrun!  Must be true or false." > /dev/stderr
     echo "Preflight test failed...  Aborting." > /dev/stderr
     return 1
   fi
@@ -121,29 +291,47 @@ function preflight_check() {
     echo "enter function ${FUNCNAME}" > /dev/stderr
   fi
   STATUS=0
+  #test for /etc/init.d service script
   if [ ! -f "${initd_script}" ];then
     echo "There is no \${initd_script} ${initd_script}." > /dev/stderr
-    echo "At a minimum the script must be able to: start, stop, and status the app server." > /dev/stderr
-    echo "Preflight test failed...  Aborting." > /dev/stderr
+    echo "  |- At a minimum the script must be able to: start, stop, and status the app server." > /dev/stderr
     STATUS=1
   fi
+  #test to make sure /etc/init.d service script is executable
+  if [ ! -x "${initd_script}" ];then
+    echo "\${initd_script} ${initd_script} is not executable." > /dev/stderr
+    STATUS=1
+  fi
+  #test force_restart environment variable (must be bool)
   if [ ! "${force_restart}" = "true" ] && [ ! "${force_restart}" = "false" ];then
     echo "force_restart=${force_restart} is not a valid option for force_restart!  Must be true or false." > /dev/stderr
-    echo "Preflight test failed...  Aborting." > /dev/stderr
     STATUS=1
   fi
+  #test move_or_copy environment variable (limited string values)
   if [ ! "${move_or_copy}" = "mv" ] && [ ! "${move_or_copy}" = "cp" ];then
     echo "move_or_copy=${move_or_copy} is not a valid option for move_or_copy!  Must be mv or cp." > /dev/stderr
-    echo "Preflight test failed...  Aborting." > /dev/stderr
+    STATUS=1
+  fi
+  #test enable_colors environment variable (must be bool)
+  if [ ! "${enable_colors}" = "true" ] && [ ! "${enable_colors}" = "false" ];then
+    #don't really care if there's something wrong with this
+    echo "WARNING: enable_colors=${enable_colors} is not a valid option for enable_colors!  Must be true or false." > /dev/stderr
+    echo "  |- setting enable_colors=false"
+    enable_colors="false"
+  fi
+  #test timeout environment variable (must be number)
+  if ! [[ "${timeout}" =~ "^[0-9]+$" ]];then
+    echo "timeout=${timeout} is not a valid option for timeout!  Must be number >= 0." > /dev/stderr
     STATUS=1
   fi
   isdeploy=0
   islib=0
+  #test check all the war files and be sure at least one exists otherwise don't deploy war files
   if [ ! -z "${war_files}" ];then
     for x in ${war_files};do
       if [ -f "${x}" ] || [ -f "${second_stage%/}/${x}" ];then
         if "${debug}";then
-          echo "stage file exists: ${x}" > /dev/stderr
+          green_echo "stage file exists: ${x}" > /dev/stderr
         fi
         isdeploy=1
         break
@@ -152,11 +340,12 @@ function preflight_check() {
       fi
     done
   fi
+  #test check all lib files and be sure at least one exists otherwise don't deploy lib files
   if [ ! -z "${lib_files}" ];then
     for x in ${lib_files};do
       if [ -f "${x}" ] || [ -f "${second_stage%/}/${x}" ];then
         if "${debug}";then
-          echo "stage file exists: ${x}" > /dev/stderr
+          green_echo "stage file exists: ${x}" > /dev/stderr
         fi
         islib=1
         break
@@ -165,56 +354,149 @@ function preflight_check() {
       fi
     done
   fi
+  #test there is at least something to deploy, otherwise no need to continue the script
   if [ "${isdeploy}" = "0" -a "${islib}" = "0" ];then
     echo "No deployments happened.  There was nothing to deploy." > /dev/stderr
-    echo "Preflight test failed...  Aborting." > /dev/stderr
     STATUS=1
   fi
+  #test the app server profile exists
   if [ ! -d "${appsprofile}" ];then
-    echo "\${appsprofile} dir does not exist: ${appsprofile}" > /dev/stderr
-    echo "Preflight test failed...  Aborting." > /dev/stderr
+    red_echo "\${appsprofile} dir does not exist: ${appsprofile}" > /dev/stderr
     STATUS=1
   fi
+  #test that the backup directory exists.  If not create it. Eventually a backup will be taken before deployment
   if [ ! -d "${backupdir}" ];then
-    echo "WARNING: \${backupdir} ${backupdir} does not exist." > /dev/stderr
+    yellow_echo "WARNING: \${backupdir} ${backupdir} does not exist." > /dev/stderr
     echo -n "Creating directory..." > /dev/stderr
     if "${dryrun}";then
-      echo "DRYRUN: mkdir -p \"${backupdir}\"" > /dev/stderr
+      echo "DRYRUN: mkdir -p \"${backupdir}\" " > /dev/stderr
     else
       mkdir -p "${backupdir}" && echo "Done." > /dev/stderr || echo "Failed." > /dev/stderr
     fi
   fi
+  #test that the backup directory exists.  If not create it. Eventually a backup will be taken before deployment
   if [ ! -d "${backupdir}/${deploydir}" ];then
-    echo "WARNING: \${backupdir} ${backupdir}/${deploydir} does not exist." > /dev/stderr
+    yellow_echo "WARNING: \${backupdir} ${backupdir}/${deploydir} does not exist." > /dev/stderr
     echo -n "Creating directory..." > /dev/stderr
     if "${dryrun}";then
-      echo "DRYRUN: mkdir -p \"${backupdir}/${deploydir}\"" > /dev/stderr
+      red_echo "DRYRUN: mkdir -p \"${backupdir}/${deploydir}\" " > /dev/stderr
     else
       mkdir -p "${backupdir}/${deploydir}" && echo "Done." > /dev/stderr || echo "Failed." > /dev/stderr
     fi
   fi
+  #test that the backup directory exists.  If not create it. Eventually a backup will be taken before deployment
   if [ ! -d "${backupdir}/${libdir}" ];then
-    echo "WARNING: \${backupdir} ${backupdir}/${libdir} does not exist." > /dev/stderr
+    yellow_echo "WARNING: \${backupdir} ${backupdir}/${libdir} does not exist." > /dev/stderr
     echo -n "Creating directory..." > /dev/stderr
     if "${dryrun}";then
-      echo "DRYRUN: mkdir -p \"${backupdir}/${libdir}\"" > /dev/stderr
+      red_echo "DRYRUN: mkdir -p \"${backupdir}/${libdir}\"" > /dev/stderr
     else
       mkdir -p "${backupdir}/${libdir}" && echo "Done." > /dev/stderr || echo "Failed." > /dev/stderr
     fi
   fi
+  #final test that the backup directory exists or was successfully created
   if [ ! -d "${backupdir}" ];then
-    echo "Something went wrong with creating \${backupdir} ${backupdir}." > /dev/stderr
-    echo "Preflight test failed...  Aborting." > /dev/stderr
+    if ! "${dryrun}";then
+      echo "Something went wrong with creating \${backupdir} ${backupdir}." > /dev/stderr
+    fi
     STATUS=1
   fi
+  #final test that the backup directory exists or was successfully created
   if [ ! -d "${backupdir}/${deploydir}" ];then
-    echo "Something went wrong with creating \${backupdir}/${deploydir} ${backupdir}/${deploydir}." > /dev/stderr
-    echo "Preflight test failed...  Aborting." > /dev/stderr
+    if ! "${dryrun}";then
+      echo "Something went wrong with creating \${backupdir}/${deploydir} ${backupdir}/${deploydir}." > /dev/stderr
+    fi
     STATUS=1
   fi
+  #final test that the backup directory exists or was successfully created
   if [ ! -d "${backupdir}/${libdir}" ];then
-    echo "Something went wrong with creating \${backupdir}/${libdir} ${backupdir}/${libdir}." > /dev/stderr
+    if ! "${dryrun}";then
+      echo "Something went wrong with creating \${backupdir}/${libdir} ${backupdir}/${libdir}." > /dev/stderr
+    fi
+    STATUS=1
+  fi
+  #if there was any failure in all of the above tests let the user know nothing is going to happen
+  if [ ! "${STATUS}" -eq "0" ];then
     echo "Preflight test failed...  Aborting." > /dev/stderr
+  fi
+  if "${debug}";then
+    echo "exit function ${FUNCNAME} return STATUS=${STATUS}" > /dev/stderr
+  fi
+  return ${STATUS}
+}
+
+#run through and backup everything
+function backup_directories() {
+  if "${debug}";then
+    echo "enter function ${FUNCNAME}" > /dev/stderr
+  fi
+  STATUS=0
+  echo "Creating backups..."
+  #custom timestamp for backup archives (used as part of the name)
+  TIME="$(date +%Y-%m-%d-%s)"
+  pushd "${appsprofile}" > /dev/null
+  if "${dryrun}";then
+    yellow_echo "DRYRUN: Changed working directory: $PWD" > /dev/stderr
+  fi
+  if [ "${isdeploy}" = "1" ];then
+    if "${dryrun}";then
+      green_echo "backup ${deploydir}: ${backupdir}/${deploydir}/${deploydir}_${TIME}.tar.gz"
+      red_echo "DRYRUN: tar -czf \"${backupdir}/${deploydir}/${deploydir}_${TIME}.tar.gz\" \"${deploydir}\"" > /dev/stderr
+    else
+      echo "backup ${deploydir}: ${backupdir}/${deploydir}/${deploydir}_${TIME}.tar.gz"
+      if ! tar -czf "${backupdir}/${deploydir}/${deploydir}_${TIME}.tar.gz" "${deploydir}";then
+        echo "Backup FAILED!" > /dev/stderr
+        STATUS=1
+      fi
+    fi
+  fi
+  if [ "${islib}" = "1" ];then
+    if "${dryrun}";then
+      green_echo "${libdir} backup: ${backupdir}/${libdir}/${libdir}_${TIME}.tar.gz"
+      red_echo "DRYRUN: tar -czf \"${backupdir}/${libdir}/${libdir_}${TIME}.tar.gz\" \"${libdir}\"" > /dev/stderr
+    else
+      echo "${libdir} backup: ${backupdir}/${libdir}/${libdir}_${TIME}.tar.gz"
+      if ! tar -czf "${backupdir}/${libdir}/${libdir}_${TIME}.tar.gz" "${libdir}";then
+        echo "Backup FAILED!" > /dev/stderr
+        STATUS=1
+      fi
+    fi
+  fi
+  popd > /dev/null
+  if "${dryrun}";then
+    yellow_echo "DRYRUN: Changed working directory: $PWD" > /dev/stderr
+  fi
+  echo "Done."
+  if "${debug}";then
+    echo "exit function ${FUNCNAME} return STATUS=${STATUS}" > /dev/stderr
+  fi
+  return ${STATUS}
+}
+
+#check to see if server shutdown is required
+function conditional_shutdown() {
+  if "${debug}";then
+    echo "enter function ${FUNCNAME}" > /dev/stderr
+  fi
+  STATUS=0
+  if [ "${islib}" = "1" ] || "${force_restart}";then
+    if "${dryrun}";then
+      red_echo "DRYRUN: \"${initd_script}\" stop" > /dev/stderr
+      green_echo "DRYRUN: app server shutdown executed."
+    else
+      if [ "${timeout}" -eq "0" ];then
+        if ! "${initd_script}" stop;then
+          red_echo "Failed shutting down the app server." > /dev/stderr
+          STATUS=1
+        fi
+      else
+        if ! timeout ${timeout} "${initd_script}" stop;then
+          echo "timeout=${timeout} not necessarily related to shutdown failure."
+          red_echo "Failed shutting down the app server." > /dev/stderr
+          STATUS=1
+        fi
+      fi
+    fi
   fi
   if "${debug}";then
     echo "exit function ${FUNCNAME} return STATUS=${STATUS}" > /dev/stderr
@@ -233,25 +515,25 @@ function deploy_wars() {
     if [ ! -z "${second_stage%/}" ] && [ ! -e "${x}" ] && [ -e "${second_stage%/}/${x}" ];then
       x="${second_stage%/}/${x}"
       if "${debug}";then
-        echo "Falling back to \$second_stage: ${x}" > /dev/stderr
+        yellow_echo "Falling back to \$second_stage: ${x}" > /dev/stderr
       fi
     fi
     #try to deploy
     if [ -e "${x}" ];then
       if "${dryrun}";then
-        echo "DRYRUN: ${move_or_copy} -f \"${x}\" \"${appsprofile}/${deploydir}/${x}\"" > /dev/stderr
-        echo "DRYRUN: ${x} deployed."
+        red_echo "DRYRUN: ${move_or_copy} -f \"${x}\" \"${appsprofile}/${deploydir}/${x}\"" > /dev/stderr
+        green_echo "DRYRUN: ${x} deployed."
       else
         #Start of deploy command list
         chown ${appsuser}\: "${x}" && \
         chmod 644 "${x}" && \
         ${move_or_copy} -f "${x}" "${appsprofile}/${deploydir}/${x}" && \
         touch "${appsprofile}/${deploydir}/${x}" && \
-        echo "${x} deployed."
+        green_echo "${x} deployed."
         #End of deploy command list
       fi
       if [ ! "$?" -eq "0" ];then
-        echo "${x} deployment FAILED!" > /dev/stderr
+        red_echo "${x} deployment FAILED!" > /dev/stderr
         STATUS=1
         break
       fi
@@ -264,6 +546,8 @@ function deploy_wars() {
   fi
   return ${STATUS}
 }
+
+#deployment logic
 function deploy_libs() {
   if "${debug}";then
     echo "enter function ${FUNCNAME}" > /dev/stderr
@@ -277,19 +561,19 @@ function deploy_libs() {
     #try to deploy
     if [ -e "${x}" ];then
       if "${dryrun}";then
-        echo "DRYRUN: ${move_or_copy} -f \"${x}\" \"${appsprofile}/${libdir}/${x}\"" > /dev/stderr
-        echo "DRYRUN: ${x} deployed."
+        red_echo "DRYRUN: ${move_or_copy} -f \"${x}\" \"${appsprofile}/${libdir}/${x}\"" > /dev/stderr
+        green_echo "DRYRUN: ${x} deployed."
       else
         #Start of deploy command list
         chown "${appsuser}"\: "${x}" && \
         chmod 644 "${x}" && \
         ${move_or_copy} -f "${x}" "${appsprofile}/${libdir}/${x}" && \
         touch "${appsprofile}/${libdir}/${x}" && \
-        echo "${x} deployed."
+        green_echo "${x} deployed."
         #End of deploy command list
       fi
       if [ ! "$?" -eq "0" ];then
-        echo "${x} deployment FAILED!" > /dev/stderr
+        red_echo "${x} deployment FAILED!" > /dev/stderr
         STATUS=1
         break
       fi
@@ -297,84 +581,6 @@ function deploy_libs() {
       echo "not exist: ${x}" > /dev/stderr
     fi
   done
-  if "${debug}";then
-    echo "exit function ${FUNCNAME} return STATUS=${STATUS}" > /dev/stderr
-  fi
-  return ${STATUS}
-}
-
-#run through and backup everything
-function backup_directories() {
-  if "${debug}";then
-    echo "enter function ${FUNCNAME}" > /dev/stderr
-  fi
-  STATUS=0
-  echo "Creating backups..."
-  TIME="$(date +%Y-%m-%d-%s)"
-  pushd "${appsprofile}" > /dev/null
-  if "${dryrun}";then
-    echo "DRYRUN: Changed working directory: $PWD" > /dev/stderr
-  fi
-  if [ "${isdeploy}" = "1" ];then
-    if "${dryrun}";then
-      echo "backup ${deploydir}: ${backupdir}/${deploydir}/${deploydir}_${TIME}.tar.gz"
-      echo "DRYRUN: tar -czf \"${backupdir}/${deploydir}/${deploydir}_${TIME}.tar.gz\" \"${deploydir}\"" > /dev/stderr
-    else
-      echo "backup ${deploydir}: ${backupdir}/${deploydir}/${deploydir}_${TIME}.tar.gz"
-      if ! tar -czf "${backupdir}/${deploydir}/${deploydir}_${TIME}.tar.gz" "${deploydir}";then
-        echo "Backup FAILED!" > /dev/stderr
-        STATUS=1
-      fi
-    fi
-  fi
-  if [ "${islib}" = "1" ];then
-    if "${dryrun}";then
-      echo "${libdir} backup: ${backupdir}/${libdir}/${libdir}_${TIME}.tar.gz"
-      echo "DRYRUN: tar -czf \"${backupdir}/${libdir}/${libdir_}${TIME}.tar.gz\" \"${libdir}\"" > /dev/stderr
-    else
-      echo "${libdir} backup: ${backupdir}/${libdir}/${libdir}_${TIME}.tar.gz"
-      if ! tar -czf "${backupdir}/${libdir}/${libdir}_${TIME}.tar.gz" "${libdir}";then
-        echo "Backup FAILED!" > /dev/stderr
-        STATUS=1
-      fi
-    fi
-  fi
-  popd > /dev/null
-  if "${dryrun}";then
-    echo "DRYRUN: Changed working directory: $PWD" > /dev/stderr
-  fi
-  echo "Done."
-  if "${debug}";then
-    echo "exit function ${FUNCNAME} return STATUS=${STATUS}" > /dev/stderr
-  fi
-  return ${STATUS}
-}
-
-#check to see if server shutdown is required
-function conditional_shutdown() {
-  if "${debug}";then
-    echo "enter function ${FUNCNAME}" > /dev/stderr
-  fi
-  STATUS=0
-  if [ "${islib}" = "1" ] || "${force_restart}";then
-    if "${dryrun}";then
-      echo "DRYRUN: \"${initd_script}\" stop" > /dev/stderr
-      echo "DRYRUN: app server shutdown executed."
-    else
-      if [ "${timeout}" -eq "0" ];then
-        if ! "${initd_script}" stop;then
-          echo "Failed shutting down the app server." > /dev/stderr
-          STATUS=1
-        fi
-      else
-        if ! timeout ${timeout} "${initd_script}" stop;then
-          echo "timeout=${timeout} not necessarily related to shutdown failure."
-          echo "Failed shutting down the app server." > /dev/stderr
-          STATUS=1
-        fi
-      fi
-    fi
-  fi
   if "${debug}";then
     echo "exit function ${FUNCNAME} return STATUS=${STATUS}" > /dev/stderr
   fi
@@ -389,23 +595,23 @@ function conditional_startup() {
   STATUS=0
   if [ "${islib}" = "1" ] || "${force_restart}";then
     if "${dryrun}";then
-      echo "DRYRUN: \"${initd_script}\" start" > /dev/stderr
-      echo "DRYRUN: app server startup executed."
+      red_echo "DRYRUN: \"${initd_script}\" start" > /dev/stderr
+      green_echo "DRYRUN: app server startup executed."
     else
       if [ "${timeout}" -eq "0" ];then
         if ! "${initd_script}" start;then
-          echo "Failed to start the app server." > /dev/stderr
+          red_echo "Failed to start the app server." > /dev/stderr
           STATUS=1
         elif ! sleep 2 && "${initd_script}" status &> /dev/null;then
-          echo "App server failed after apparent successful startup." > /dev/stderr
+          red_echo "App server failed after apparent successful startup." > /dev/stderr
           STATUS=1
         fi
       else
         if ! timeout ${timeout} "${initd_script}" start;then
-          echo "Failed to start the app server." > /dev/stderr
+          red_echo "Failed to start the app server." > /dev/stderr
           STATUS=1
         elif ! sleep 2 && "${initd_script}" status &> /dev/null;then
-          echo "App server failed after apparent successful startup." > /dev/stderr
+          red_echo "App server failed after apparent successful startup." > /dev/stderr
           STATUS=1
         fi
       fi
@@ -430,7 +636,7 @@ deploy_wars && \
 deploy_libs && \
 conditional_startup
 STATUS=$?
-if "${debug}";then
+if [ "${debug}" = "true" ];then
   echo "exit STATUS=${STATUS}" > /dev/stderr
 fi
 
