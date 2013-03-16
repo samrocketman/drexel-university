@@ -89,7 +89,7 @@ debug="${debug:-false}"
 #simulates a deployment without executing changes (true=simulate deployment, false=execute deployment)
 dryrun="${dryrun:-false}"
 #just some colored output eye candy in the terminal
-enable_colors="${enable_colors:-false}"
+enable_colors="${enable_colors:-true}"
 ########### END DEFAULT CONFIGURATION
 
 #COLORS DOCUMENTATION
@@ -628,7 +628,11 @@ function conditional_startup() {
 #stdout will be used for successful status updates
 #the script will exit with a meaningful status code
 if_debug_print_environment > /dev/stderr
-cd "$stage" && \
+if [ ! -d "${stage}" ];then
+  red_echo "stage=${stage} directory does not exist!" > /dev/stderr
+  echo "Preflight test failed...  Aborting." > /dev/stderr
+fi
+cd "$stage" &> /dev/null && \
 preflight_check && \
 backup_directories && \
 conditional_shutdown && \
