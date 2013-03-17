@@ -540,20 +540,21 @@ function deploy_wars() {
     #try to deploy
     if [ -e "${x}" ];then
       if "${dryrun}";then
-        red_echo "DRYRUN: ${move_or_copy} -f \"${x}\" \"${appsprofile}/${deploydir}/${x}\"" > /dev/stderr
+        #parameter expansion to the rescue for removing the second_stage from the ${x} variable like ${x#${second_stage}/}!
+        red_echo "DRYRUN: ${move_or_copy} -f \"${x}\" \"${appsprofile}/${deploydir}/${x#${second_stage}/}\"" > /dev/stderr
         green_echo "DRYRUN: ${x} deployed."
       else
         #Start of deploy command list
         if "${runas_appsuser}";then
           chmod 644 "${x}" && \
-          ${move_or_copy} -f "${x}" "${appsprofile}/${deploydir}/${x}" && \
-          touch "${appsprofile}/${deploydir}/${x}" && \
+          ${move_or_copy} -f "${x}" "${appsprofile}/${deploydir}/${x#${second_stage}}" && \
+          touch "${appsprofile}/${deploydir}/${x#${second_stage}/}" && \
           green_echo "${x} deployed."
         else
           chown ${appsuser}\: "${x}" && \
           chmod 644 "${x}" && \
-          ${move_or_copy} -f "${x}" "${appsprofile}/${deploydir}/${x}" && \
-          touch "${appsprofile}/${deploydir}/${x}" && \
+          ${move_or_copy} -f "${x}" "${appsprofile}/${deploydir}/${x#${second_stage}/}" && \
+          touch "${appsprofile}/${deploydir}/${x#${second_stage}/}" && \
           green_echo "${x} deployed."
         fi
         #End of deploy command list
@@ -587,20 +588,21 @@ function deploy_libs() {
     #try to deploy
     if [ -e "${x}" ];then
       if "${dryrun}";then
-        red_echo "DRYRUN: ${move_or_copy} -f \"${x}\" \"${appsprofile}/${libdir}/${x}\"" > /dev/stderr
+        #parameter expansion to the rescue for removing the second_stage from the ${x} variable like ${x#${second_stage}/}!
+        red_echo "DRYRUN: ${move_or_copy} -f \"${x}\" \"${appsprofile}/${libdir}/${x#${second_stage}/}\"" > /dev/stderr
         green_echo "DRYRUN: ${x} deployed."
       else
         #Start of deploy command list
         if "${runas_appsuser}";then
           chmod 644 "${x}" && \
-          ${move_or_copy} -f "${x}" "${appsprofile}/${deploydir}/${x}" && \
-          touch "${appsprofile}/${deploydir}/${x}" && \
+          ${move_or_copy} -f "${x}" "${appsprofile}/${libdir}/${x#${second_stage}}" && \
+          touch "${appsprofile}/${libdir}/${x#${second_stage}/}" && \
           green_echo "${x} deployed."
         else
           chown ${appsuser}\: "${x}" && \
           chmod 644 "${x}" && \
-          ${move_or_copy} -f "${x}" "${appsprofile}/${deploydir}/${x}" && \
-          touch "${appsprofile}/${deploydir}/${x}" && \
+          ${move_or_copy} -f "${x}" "${appsprofile}/${libdir}/${x#${second_stage}/}" && \
+          touch "${appsprofile}/${libdir}/${x#${second_stage}/}" && \
           green_echo "${x} deployed."
         fi
         #End of deploy command list
