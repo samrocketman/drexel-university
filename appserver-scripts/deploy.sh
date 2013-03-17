@@ -45,6 +45,7 @@ export PATH="${PATH}:/bin"
 #lib_files=""
 #appsprofile=""
 #appsuser=""
+#runas_appsuser=false
 #deploydir=""
 #libdir=""
 #backupdir=""
@@ -58,7 +59,7 @@ export PATH="${PATH}:/bin"
 ########### END USER CONFIGURATION
 
 ########### DEFAULT CONFIGURATION
-#cd to the staging directory where files to be deployed are kept;the working directory must be the staging area
+#cd to the staging directory where files to be deployed are kept;this will become the working directory
 stage="${stage:-/opt/staging}"
 #secondary staging directory.  Check here if deployment files not in $stage.  Useful for cluster deployments.
 second_stage="${second_stage:-}"
@@ -70,6 +71,8 @@ lib_files="${lib_files:-}"
 appsprofile="${appsprofile:-/opt/jboss/server/default}"
 #app server user
 appsuser="${appsuser:-jboss}"
+#assume will be run as apps user otherwise root is assumed (it will basically just avoid the chown command)
+runas_appsuser="${runas_appsuser:-false}"
 # deploy directory (relative to ${appsprofile})
 deploydir="${deploydir:-deploy}"
 # lib directory (relative to ${appsprofile})
@@ -286,6 +289,12 @@ function preflight_check() {
     echo "Preflight test failed...  Aborting." > /dev/stderr
     return 1
   fi
+  #test runas_appsuser environment variable (must be bool)
+  if [ ! "${runas_appsuser}" = "true" ] && [ ! "${runas_appsuser}" = "false" ];then
+    echo "runas_appsuser=${runas_appsuser} is not a valid option for runas_appsuser!  Must be true or false." > /dev/stderr
+    echo "Preflight test failed...  Aborting." > /dev/stderr
+    return 1
+  fi
   #END CRITICAL CHECKS
   if "${debug}";then
     echo "enter function ${FUNCNAME}" > /dev/stderr
@@ -307,6 +316,11 @@ function preflight_check() {
     echo "force_restart=${force_restart} is not a valid option for force_restart!  Must be true or false." > /dev/stderr
     STATUS=1
   fi
+  #test runas_appsuser environment variable (must be bool)
+  if [ ! "${runas_appsuser}" = "true" ] && [ ! "${runas_appsuser}" = "false" ];then
+    echo "runas_appsuser=${runas_appsuser} is not a valid option for runas_appsuser!  Must be true or false." > /dev/stderr
+    STATUS=1
+  fi
   #test move_or_copy environment variable (limited string values)
   if [ ! "${move_or_copy}" = "mv" ] && [ ! "${move_or_copy}" = "cp" ];then
     echo "move_or_copy=${move_or_copy} is not a valid option for move_or_copy!  Must be mv or cp." > /dev/stderr
@@ -324,6 +338,11 @@ function preflight_check() {
     echo "timeout=${timeout} is not a valid option for timeout!  Must be number >= 0." > /dev/stderr
     STATUS=1
   fi
+  #test if $runas_appsuser set make sure the script is actually running as the $appsuser.
+  if "${runas_appsuser}" && [ ! "${appsuser}" = "${USER}" ];then
+    echo "runas_appsuser is true.  The appsuser=${appsuser} however you're currently running as ${USER}"
+    STATUS=1
+  fi
   isdeploy=0
   islib=0
   #test check all the war files and be sure at least one exists otherwise don't deploy war files
@@ -331,7 +350,7 @@ function preflight_check() {
     for x in ${war_files};do
       if [ -f "${x}" ] || [ -f "${second_stage%/}/${x}" ];then
         if "${debug}";then
-          green_echo "stage file exists: ${x}" > /dev/stderr
+          yellow_echo "stage file exists: ${x}" > /dev/stderr
         fi
         isdeploy=1
         break
@@ -525,11 +544,18 @@ function deploy_wars() {
         green_echo "DRYRUN: ${x} deployed."
       else
         #Start of deploy command list
-        chown ${appsuser}\: "${x}" && \
-        chmod 644 "${x}" && \
-        ${move_or_copy} -f "${x}" "${appsprofile}/${deploydir}/${x}" && \
-        touch "${appsprofile}/${deploydir}/${x}" && \
-        green_echo "${x} deployed."
+        if "${runas_appsuser}";then
+          chmod 644 "${x}" && \
+          ${move_or_copy} -f "${x}" "${appsprofile}/${deploydir}/${x}" && \
+          touch "${appsprofile}/${deploydir}/${x}" && \
+          green_echo "${x} deployed."
+        else
+          chown ${appsuser}\: "${x}" && \
+          chmod 644 "${x}" && \
+          ${move_or_copy} -f "${x}" "${appsprofile}/${deploydir}/${x}" && \
+          touch "${appsprofile}/${deploydir}/${x}" && \
+          green_echo "${x} deployed."
+        fi
         #End of deploy command list
       fi
       if [ ! "$?" -eq "0" ];then
@@ -565,13 +591,21 @@ function deploy_libs() {
         green_echo "DRYRUN: ${x} deployed."
       else
         #Start of deploy command list
-        chown "${appsuser}"\: "${x}" && \
-        chmod 644 "${x}" && \
-        ${move_or_copy} -f "${x}" "${appsprofile}/${libdir}/${x}" && \
-        touch "${appsprofile}/${libdir}/${x}" && \
-        green_echo "${x} deployed."
+        if "${runas_appsuser}";then
+          chmod 644 "${x}" && \
+          ${move_or_copy} -f "${x}" "${appsprofile}/${deploydir}/${x}" && \
+          touch "${appsprofile}/${deploydir}/${x}" && \
+          green_echo "${x} deployed."
+        else
+          chown ${appsuser}\: "${x}" && \
+          chmod 644 "${x}" && \
+          ${move_or_copy} -f "${x}" "${appsprofile}/${deploydir}/${x}" && \
+          touch "${appsprofile}/${deploydir}/${x}" && \
+          green_echo "${x} deployed."
+        fi
         #End of deploy command list
       fi
+      #test the status output from the deploy command list for errors
       if [ ! "$?" -eq "0" ];then
         red_echo "${x} deployment FAILED!" > /dev/stderr
         STATUS=1
@@ -618,7 +652,7 @@ function conditional_startup() {
     fi
   fi
   if "${debug}";then
-    echo "exit function exit function ${FUNCNAME} return STATUS=${STATUS}" > /dev/stderr
+    echo "exit function ${FUNCNAME} return STATUS=${STATUS}" > /dev/stderr
   fi
   return ${STATUS}
 }
