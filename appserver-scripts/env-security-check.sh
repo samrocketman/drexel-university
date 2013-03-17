@@ -9,6 +9,9 @@
 #To run a QA test on this file run the following command
 #  ./env-security-check.sh < ./env-qa-test.sh
 
+#allow users to export environment variables; if set to false then export command will fail security check.
+allow_variable_exporting="true"
+
 #exit code, this may get modified
 result=0
 
@@ -26,15 +29,22 @@ while read line;do
     echo 'security failure: (list) subshell execution is not allowed in env.sh' > /dev/stderr
     result=1
   elif ! echo "${line}" | grep '^\s*[a-zA-Z_0-9]*=' &> /dev/null;then
-    echo 'security failure: command execution detected.' > /dev/stderr
-    result=1
+    if "${allow_variable_exporting}";then
+      if ! echo "${line}" | grep '^export ' &> /dev/null;then
+        echo 'security failure: command execution detected.' > /dev/stderr
+        result=1
+      fi
+    else
+      echo 'security failure: command execution detected.' > /dev/stderr
+      result=1
+    fi
   elif echo "${line}" | grep '$[0-9]' &> /dev/null;then
     echo 'security failure: assignment shell script arguments to variables not allowed in env.sh' > /dev/stderr
     result=1
   fi
   #system_variables list obtained using following command
   #env | grep '^[a-zA-Z_]*=' | cut -d= -f1 | tr '\n' ' ' | sed 's/\(.*\)/\1\n/'
-  system_variables="HOSTNAME SHELL TERM HISTSIZE USER JAVA_OPTS LS_COLORS TERMCAP PATH MAIL STY PWD JAVA_HOME LANG HISTCONTROL HOME SHLVL LOGNAME CVS_RSH WINDOW LESSOPEN G_BROKEN_FILENAMES _ OLDPWD"
+  system_variables="appsprofile backupdir deploydir libdir second_stage stage HOSTNAME SHELL TERM HISTSIZE USER JAVA_OPTS LS_COLORS TERMCAP PATH MAIL STY PWD JAVA_HOME LANG HISTCONTROL HOME SHLVL LOGNAME CVS_RSH WINDOW LESSOPEN G_BROKEN_FILENAMES _ OLDPWD"
   for var in ${system_variables};do
     if echo "${line}" | grep "^\s*${var}=" &> /dev/null;then
       echo "security failure: assignment of system variable ${var} is not allowed in env.sh" > /dev/stderr
