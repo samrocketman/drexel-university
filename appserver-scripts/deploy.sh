@@ -95,6 +95,14 @@ dryrun="${dryrun:-false}"
 enable_colors="${enable_colors:-true}"
 ########### END DEFAULT CONFIGURATION
 
+#clean up user defined paths in variables vars (basically remove trailing slash if there is one with parameter expansion)
+stage="${stage%/}"
+second_stage="${second_stage%/}"
+appsprofile="${appsprofile%/}"
+deploydir="${deploydir%/}"
+libdir="${libdir%/}"
+backupdir="${backupdir%/}"
+
 #COLORS DOCUMENTATION
 # black - 30
 # red - 31
@@ -531,8 +539,8 @@ function deploy_wars() {
   STATUS=0
   for x in ${war_files};do
     #if war file does not exist in the current $stage then try to fall back to $second_stage
-    if [ ! -z "${second_stage%/}" ] && [ ! -e "${x}" ] && [ -e "${second_stage%/}/${x}" ];then
-      x="${second_stage%/}/${x}"
+    if [ ! -z "${second_stage%/}" ] && [ ! -e "${x}" ] && [ -e "${second_stage}/${x}" ];then
+      x="${second_stage}/${x}"
       if "${debug}";then
         yellow_echo "Falling back to \$second_stage: ${x}" > /dev/stderr
       fi
@@ -582,8 +590,8 @@ function deploy_libs() {
   STATUS=0
   for x in ${lib_files};do
     #if war file does not exist in the current $stage then try to fall back to $second_stage
-    if [ ! -z "${second_stage%/}" ] && [ ! -e "${x}" ] && [ -e "${second_stage%/}/${x}" ];then
-      x="${second_stage%/}/${x}"
+    if [ ! -z "${second_stage}" ] && [ ! -e "${x}" ] && [ -e "${second_stage}/${x}" ];then
+      x="${second_stage}/${x}"
     fi
     #try to deploy
     if [ -e "${x}" ];then
