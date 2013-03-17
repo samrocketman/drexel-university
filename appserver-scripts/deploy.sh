@@ -400,7 +400,7 @@ function preflight_check() {
     if "${dryrun}";then
       echo "DRYRUN: mkdir -p \"${backupdir}\" " 1>&2
     else
-      mkdir -p "${backupdir}" && echo "Done." > /dev/stderr || echo "Failed." 1>&2
+      mkdir -p "${backupdir}" && echo "Done." 1>&2 || echo "Failed." 1>&2
     fi
   fi
   #test that the backup directory exists.  If not create it. Eventually a backup will be taken before deployment
@@ -410,7 +410,7 @@ function preflight_check() {
     if "${dryrun}";then
       red_echo "DRYRUN: mkdir -p \"${backupdir}/${deploydir}\" " 1>&2
     else
-      mkdir -p "${backupdir}/${deploydir}" && echo "Done." > /dev/stderr || echo "Failed." 1>&2
+      mkdir -p "${backupdir}/${deploydir}" && echo "Done." 1>&2 || echo "Failed." 1>&2
     fi
   fi
   #test that the backup directory exists.  If not create it. Eventually a backup will be taken before deployment
@@ -420,7 +420,7 @@ function preflight_check() {
     if "${dryrun}";then
       red_echo "DRYRUN: mkdir -p \"${backupdir}/${libdir}\"" 1>&2
     else
-      mkdir -p "${backupdir}/${libdir}" && echo "Done." > /dev/stderr || echo "Failed." 1>&2
+      mkdir -p "${backupdir}/${libdir}" && echo "Done." 1>&2 || echo "Failed." 1>&2
     fi
   fi
   #final test that the backup directory exists or was successfully created
