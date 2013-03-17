@@ -287,69 +287,71 @@ function preflight_check() {
   #START CRITICAL CHECKS (checks which are depended on by the preflight_check in itself)
   #test debug environment variable (must be bool)
   if [ ! "${debug}" = "true" ] && [ ! "${debug}" = "false" ];then
-    red_echo "debug=${debug} is not a valid option for debug!  Must be true or false." > /dev/stderr
-    echo "Preflight test failed...  Aborting." > /dev/stderr
+    red_echo "debug=${debug} is not a valid option for debug!  Must be true or false." 1>&2
+    echo "Preflight test failed...  Aborting." 1>&2
     return 1
   fi
   #test dryrun environment variable (must be bool)
   if [ ! "${dryrun}" = "true" ] && [ ! "${dryrun}" = "false" ];then
-    red_echo "dryrun=${dryrun} is not a valid option for dryrun!  Must be true or false." > /dev/stderr
-    echo "Preflight test failed...  Aborting." > /dev/stderr
+    red_echo "dryrun=${dryrun} is not a valid option for dryrun!  Must be true or false." 1>&2
+    echo "Preflight test failed...  Aborting." 1>&2
     return 1
   fi
   #test runas_appsuser environment variable (must be bool)
   if [ ! "${runas_appsuser}" = "true" ] && [ ! "${runas_appsuser}" = "false" ];then
-    echo "runas_appsuser=${runas_appsuser} is not a valid option for runas_appsuser!  Must be true or false." > /dev/stderr
-    echo "Preflight test failed...  Aborting." > /dev/stderr
+    echo "runas_appsuser=${runas_appsuser} is not a valid option for runas_appsuser!  Must be true or false." 1>&2
+    echo "Preflight test failed...  Aborting." 1>&2
     return 1
   fi
   #END CRITICAL CHECKS
   if "${debug}";then
-    echo "enter function ${FUNCNAME}" > /dev/stderr
+    echo "enter function ${FUNCNAME}" 1>&2
   fi
   STATUS=0
   #test for /etc/init.d service script
   if [ ! -f "${initd_script}" ];then
-    echo "There is no \${initd_script} ${initd_script}." > /dev/stderr
-    echo "  |- At a minimum the script must be able to: start, stop, and status the app server." > /dev/stderr
+    echo "There is no \${initd_script} ${initd_script}." 1>&2
+    echo "  |- At a minimum the script must be able to: start, stop, and status the app server." 1>&2
     STATUS=1
   fi
   #test to make sure /etc/init.d service script is executable
   if [ ! -x "${initd_script}" ];then
-    echo "\${initd_script} ${initd_script} is not executable." > /dev/stderr
+    echo "\${initd_script} ${initd_script} is not executable." 1>&2
     STATUS=1
   fi
   #test force_restart environment variable (must be bool)
   if [ ! "${force_restart}" = "true" ] && [ ! "${force_restart}" = "false" ];then
-    echo "force_restart=${force_restart} is not a valid option for force_restart!  Must be true or false." > /dev/stderr
-    STATUS=1
-  fi
-  #test runas_appsuser environment variable (must be bool)
-  if [ ! "${runas_appsuser}" = "true" ] && [ ! "${runas_appsuser}" = "false" ];then
-    echo "runas_appsuser=${runas_appsuser} is not a valid option for runas_appsuser!  Must be true or false." > /dev/stderr
+    echo "force_restart=${force_restart} is not a valid option for force_restart!  Must be true or false." 1>&2
     STATUS=1
   fi
   #test move_or_copy environment variable (limited string values)
   if [ ! "${move_or_copy}" = "mv" ] && [ ! "${move_or_copy}" = "cp" ];then
-    echo "move_or_copy=${move_or_copy} is not a valid option for move_or_copy!  Must be mv or cp." > /dev/stderr
+    echo "move_or_copy=${move_or_copy} is not a valid option for move_or_copy!  Must be mv or cp." 1>&2
     STATUS=1
   fi
   #test enable_colors environment variable (must be bool)
   if [ ! "${enable_colors}" = "true" ] && [ ! "${enable_colors}" = "false" ];then
     #don't really care if there's something wrong with this
-    echo "WARNING: enable_colors=${enable_colors} is not a valid option for enable_colors!  Must be true or false." > /dev/stderr
+    echo "WARNING: enable_colors=${enable_colors} is not a valid option for enable_colors!  Must be true or false." 1>&2
     echo "  |- setting enable_colors=false"
     enable_colors="false"
   fi
   #test timeout environment variable (must be number)
   if ! [[ "${timeout}" =~ "^[0-9]+$" ]];then
-    echo "timeout=${timeout} is not a valid option for timeout!  Must be number >= 0." > /dev/stderr
+    echo "timeout=${timeout} is not a valid option for timeout!  Must be number >= 0." 1>&2
     STATUS=1
   fi
   #test if $runas_appsuser set make sure the script is actually running as the $appsuser.
-  if "${runas_appsuser}" && [ ! "${appsuser}" = "${USER}" ];then
-    echo "runas_appsuser is true.  The appsuser=${appsuser} however you're currently running as ${USER}"
-    STATUS=1
+  if "${runas_appsuser}";then
+    if [ ! "${appsuser}" = "${USER}" ];then
+      echo "runas_appsuser is true.  The appsuser=${appsuser} however you're currently running as ${USER}" 1>&2
+      STATUS=1
+    fi
+  else
+    if [ ! "${USER}" = "root" ];then
+      echo "Trying to run deploy.sh as user ${USER}.  Must be run as root or choose the runas_appsuser option." 1>&2
+      STATUS=1
+    fi
   fi
   isdeploy=0
   islib=0
@@ -358,12 +360,12 @@ function preflight_check() {
     for x in ${war_files};do
       if [ -f "${x}" ] || [ -f "${second_stage%/}/${x}" ];then
         if "${debug}";then
-          yellow_echo "stage file exists: ${x}" > /dev/stderr
+          yellow_echo "stage file exists: ${x}" 1>&2
         fi
         isdeploy=1
         break
       elif "${debug}";then
-        echo "not exist: ${x}" > /dev/stderr
+        echo "not exist: ${x}" 1>&2
       fi
     done
   fi
@@ -372,82 +374,82 @@ function preflight_check() {
     for x in ${lib_files};do
       if [ -f "${x}" ] || [ -f "${second_stage%/}/${x}" ];then
         if "${debug}";then
-          green_echo "stage file exists: ${x}" > /dev/stderr
+          green_echo "stage file exists: ${x}" 1>&2
         fi
         islib=1
         break
       elif "${debug}";then
-        echo "not exist: ${x}" > /dev/stderr
+        echo "not exist: ${x}" 1>&2
       fi
     done
   fi
   #test there is at least something to deploy, otherwise no need to continue the script
   if [ "${isdeploy}" = "0" -a "${islib}" = "0" ];then
-    echo "No deployments happened.  There was nothing to deploy." > /dev/stderr
+    echo "No deployments happened.  There was nothing to deploy." 1>&2
     STATUS=1
   fi
   #test the app server profile exists
   if [ ! -d "${appsprofile}" ];then
-    red_echo "\${appsprofile} dir does not exist: ${appsprofile}" > /dev/stderr
+    red_echo "\${appsprofile} dir does not exist: ${appsprofile}" 1>&2
     STATUS=1
   fi
   #test that the backup directory exists.  If not create it. Eventually a backup will be taken before deployment
   if [ ! -d "${backupdir}" ];then
-    yellow_echo "WARNING: \${backupdir} ${backupdir} does not exist." > /dev/stderr
-    echo -n "Creating directory..." > /dev/stderr
+    yellow_echo "WARNING: \${backupdir} ${backupdir} does not exist." 1>&2
+    echo -n "Creating directory..." 1>&2
     if "${dryrun}";then
-      echo "DRYRUN: mkdir -p \"${backupdir}\" " > /dev/stderr
+      echo "DRYRUN: mkdir -p \"${backupdir}\" " 1>&2
     else
-      mkdir -p "${backupdir}" && echo "Done." > /dev/stderr || echo "Failed." > /dev/stderr
+      mkdir -p "${backupdir}" && echo "Done." > /dev/stderr || echo "Failed." 1>&2
     fi
   fi
   #test that the backup directory exists.  If not create it. Eventually a backup will be taken before deployment
   if [ ! -d "${backupdir}/${deploydir}" ];then
-    yellow_echo "WARNING: \${backupdir} ${backupdir}/${deploydir} does not exist." > /dev/stderr
-    echo -n "Creating directory..." > /dev/stderr
+    yellow_echo "WARNING: \${backupdir} ${backupdir}/${deploydir} does not exist." 1>&2
+    echo -n "Creating directory..." 1>&2
     if "${dryrun}";then
-      red_echo "DRYRUN: mkdir -p \"${backupdir}/${deploydir}\" " > /dev/stderr
+      red_echo "DRYRUN: mkdir -p \"${backupdir}/${deploydir}\" " 1>&2
     else
-      mkdir -p "${backupdir}/${deploydir}" && echo "Done." > /dev/stderr || echo "Failed." > /dev/stderr
+      mkdir -p "${backupdir}/${deploydir}" && echo "Done." > /dev/stderr || echo "Failed." 1>&2
     fi
   fi
   #test that the backup directory exists.  If not create it. Eventually a backup will be taken before deployment
   if [ ! -d "${backupdir}/${libdir}" ];then
-    yellow_echo "WARNING: \${backupdir} ${backupdir}/${libdir} does not exist." > /dev/stderr
-    echo -n "Creating directory..." > /dev/stderr
+    yellow_echo "WARNING: \${backupdir} ${backupdir}/${libdir} does not exist." 1>&2
+    echo -n "Creating directory..." 1>&2
     if "${dryrun}";then
-      red_echo "DRYRUN: mkdir -p \"${backupdir}/${libdir}\"" > /dev/stderr
+      red_echo "DRYRUN: mkdir -p \"${backupdir}/${libdir}\"" 1>&2
     else
-      mkdir -p "${backupdir}/${libdir}" && echo "Done." > /dev/stderr || echo "Failed." > /dev/stderr
+      mkdir -p "${backupdir}/${libdir}" && echo "Done." > /dev/stderr || echo "Failed." 1>&2
     fi
   fi
   #final test that the backup directory exists or was successfully created
   if [ ! -d "${backupdir}" ];then
     if ! "${dryrun}";then
-      echo "Something went wrong with creating \${backupdir} ${backupdir}." > /dev/stderr
+      echo "Something went wrong with creating \${backupdir} ${backupdir}." 1>&2
     fi
     STATUS=1
   fi
   #final test that the backup directory exists or was successfully created
   if [ ! -d "${backupdir}/${deploydir}" ];then
     if ! "${dryrun}";then
-      echo "Something went wrong with creating \${backupdir}/${deploydir} ${backupdir}/${deploydir}." > /dev/stderr
+      echo "Something went wrong with creating \${backupdir}/${deploydir} ${backupdir}/${deploydir}." 1>&2
     fi
     STATUS=1
   fi
   #final test that the backup directory exists or was successfully created
   if [ ! -d "${backupdir}/${libdir}" ];then
     if ! "${dryrun}";then
-      echo "Something went wrong with creating \${backupdir}/${libdir} ${backupdir}/${libdir}." > /dev/stderr
+      echo "Something went wrong with creating \${backupdir}/${libdir} ${backupdir}/${libdir}." 1>&2
     fi
     STATUS=1
   fi
   #if there was any failure in all of the above tests let the user know nothing is going to happen
   if [ ! "${STATUS}" -eq "0" ];then
-    echo "Preflight test failed...  Aborting." > /dev/stderr
+    echo "Preflight test failed...  Aborting." 1>&2
   fi
   if "${debug}";then
-    echo "exit function ${FUNCNAME} return STATUS=${STATUS}" > /dev/stderr
+    echo "exit function ${FUNCNAME} return STATUS=${STATUS}" 1>&2
   fi
   return ${STATUS}
 }
@@ -455,7 +457,7 @@ function preflight_check() {
 #run through and backup everything
 function backup_directories() {
   if "${debug}";then
-    echo "enter function ${FUNCNAME}" > /dev/stderr
+    echo "enter function ${FUNCNAME}" 1>&2
   fi
   STATUS=0
   echo "Creating backups..."
@@ -463,16 +465,16 @@ function backup_directories() {
   TIME="$(date +%Y-%m-%d-%s)"
   pushd "${appsprofile}" > /dev/null
   if "${dryrun}";then
-    yellow_echo "DRYRUN: Changed working directory: $PWD" > /dev/stderr
+    yellow_echo "DRYRUN: Changed working directory: $PWD" 1>&2
   fi
   if [ "${isdeploy}" = "1" ];then
     if "${dryrun}";then
       green_echo "backup ${deploydir}: ${backupdir}/${deploydir}/${deploydir}_${TIME}.tar.gz"
-      red_echo "DRYRUN: tar -czf \"${backupdir}/${deploydir}/${deploydir}_${TIME}.tar.gz\" \"${deploydir}\"" > /dev/stderr
+      red_echo "DRYRUN: tar -czf \"${backupdir}/${deploydir}/${deploydir}_${TIME}.tar.gz\" \"${deploydir}\"" 1>&2
     else
       echo "backup ${deploydir}: ${backupdir}/${deploydir}/${deploydir}_${TIME}.tar.gz"
       if ! tar -czf "${backupdir}/${deploydir}/${deploydir}_${TIME}.tar.gz" "${deploydir}";then
-        echo "Backup FAILED!" > /dev/stderr
+        echo "Backup FAILED!" 1>&2
         STATUS=1
       fi
     fi
@@ -480,22 +482,22 @@ function backup_directories() {
   if [ "${islib}" = "1" ];then
     if "${dryrun}";then
       green_echo "${libdir} backup: ${backupdir}/${libdir}/${libdir}_${TIME}.tar.gz"
-      red_echo "DRYRUN: tar -czf \"${backupdir}/${libdir}/${libdir_}${TIME}.tar.gz\" \"${libdir}\"" > /dev/stderr
+      red_echo "DRYRUN: tar -czf \"${backupdir}/${libdir}/${libdir_}${TIME}.tar.gz\" \"${libdir}\"" 1>&2
     else
       echo "${libdir} backup: ${backupdir}/${libdir}/${libdir}_${TIME}.tar.gz"
       if ! tar -czf "${backupdir}/${libdir}/${libdir}_${TIME}.tar.gz" "${libdir}";then
-        echo "Backup FAILED!" > /dev/stderr
+        echo "Backup FAILED!" 1>&2
         STATUS=1
       fi
     fi
   fi
   popd > /dev/null
   if "${dryrun}";then
-    yellow_echo "DRYRUN: Changed working directory: $PWD" > /dev/stderr
+    yellow_echo "DRYRUN: Changed working directory: $PWD" 1>&2
   fi
   echo "Done."
   if "${debug}";then
-    echo "exit function ${FUNCNAME} return STATUS=${STATUS}" > /dev/stderr
+    echo "exit function ${FUNCNAME} return STATUS=${STATUS}" 1>&2
   fi
   return ${STATUS}
 }
@@ -503,30 +505,30 @@ function backup_directories() {
 #check to see if server shutdown is required
 function conditional_shutdown() {
   if "${debug}";then
-    echo "enter function ${FUNCNAME}" > /dev/stderr
+    echo "enter function ${FUNCNAME}" 1>&2
   fi
   STATUS=0
   if [ "${islib}" = "1" ] || "${force_restart}";then
     if "${dryrun}";then
-      red_echo "DRYRUN: \"${initd_script}\" stop" > /dev/stderr
+      red_echo "DRYRUN: \"${initd_script}\" stop" 1>&2
       green_echo "DRYRUN: app server shutdown executed."
     else
       if [ "${timeout}" -eq "0" ];then
         if ! "${initd_script}" stop;then
-          red_echo "Failed shutting down the app server." > /dev/stderr
+          red_echo "Failed shutting down the app server." 1>&2
           STATUS=1
         fi
       else
         if ! timeout ${timeout} "${initd_script}" stop;then
           echo "timeout=${timeout} not necessarily related to shutdown failure."
-          red_echo "Failed shutting down the app server." > /dev/stderr
+          red_echo "Failed shutting down the app server." 1>&2
           STATUS=1
         fi
       fi
     fi
   fi
   if "${debug}";then
-    echo "exit function ${FUNCNAME} return STATUS=${STATUS}" > /dev/stderr
+    echo "exit function ${FUNCNAME} return STATUS=${STATUS}" 1>&2
   fi
   return ${STATUS}
 }
@@ -534,7 +536,7 @@ function conditional_shutdown() {
 #deployment logic
 function deploy_wars() {
   if "${debug}";then
-    echo "enter function ${FUNCNAME}" > /dev/stderr
+    echo "enter function ${FUNCNAME}" 1>&2
   fi
   STATUS=0
   for x in ${war_files};do
@@ -542,14 +544,14 @@ function deploy_wars() {
     if [ ! -z "${second_stage%/}" ] && [ ! -e "${x}" ] && [ -e "${second_stage}/${x}" ];then
       x="${second_stage}/${x}"
       if "${debug}";then
-        yellow_echo "Falling back to \$second_stage: ${x}" > /dev/stderr
+        yellow_echo "Falling back to \$second_stage: ${x}" 1>&2
       fi
     fi
     #try to deploy
     if [ -e "${x}" ];then
       if "${dryrun}";then
         #parameter expansion to the rescue for removing the second_stage from the ${x} variable like ${x#${second_stage}/}!
-        red_echo "DRYRUN: ${move_or_copy} -f \"${x}\" \"${appsprofile}/${deploydir}/${x#${second_stage}/}\"" > /dev/stderr
+        red_echo "DRYRUN: ${move_or_copy} -f \"${x}\" \"${appsprofile}/${deploydir}/${x#${second_stage}/}\"" 1>&2
         green_echo "DRYRUN: ${x} deployed."
       else
         #Start of deploy command list
@@ -568,16 +570,16 @@ function deploy_wars() {
         #End of deploy command list
       fi
       if [ ! "$?" -eq "0" ];then
-        red_echo "${x} deployment FAILED!" > /dev/stderr
+        red_echo "${x} deployment FAILED!" 1>&2
         STATUS=1
         break
       fi
     elif "${debug}";then
-      echo "not exist: ${x}" > /dev/stderr
+      echo "not exist: ${x}" 1>&2
     fi
   done
   if "${debug}";then
-    echo "exit function ${FUNCNAME} return STATUS=${STATUS}" > /dev/stderr
+    echo "exit function ${FUNCNAME} return STATUS=${STATUS}" 1>&2
   fi
   return ${STATUS}
 }
@@ -585,7 +587,7 @@ function deploy_wars() {
 #deployment logic
 function deploy_libs() {
   if "${debug}";then
-    echo "enter function ${FUNCNAME}" > /dev/stderr
+    echo "enter function ${FUNCNAME}" 1>&2
   fi
   STATUS=0
   for x in ${lib_files};do
@@ -597,7 +599,7 @@ function deploy_libs() {
     if [ -e "${x}" ];then
       if "${dryrun}";then
         #parameter expansion to the rescue for removing the second_stage from the ${x} variable like ${x#${second_stage}/}!
-        red_echo "DRYRUN: ${move_or_copy} -f \"${x}\" \"${appsprofile}/${libdir}/${x#${second_stage}/}\"" > /dev/stderr
+        red_echo "DRYRUN: ${move_or_copy} -f \"${x}\" \"${appsprofile}/${libdir}/${x#${second_stage}/}\"" 1>&2
         green_echo "DRYRUN: ${x} deployed."
       else
         #Start of deploy command list
@@ -617,16 +619,16 @@ function deploy_libs() {
       fi
       #test the status output from the deploy command list for errors
       if [ ! "$?" -eq "0" ];then
-        red_echo "${x} deployment FAILED!" > /dev/stderr
+        red_echo "${x} deployment FAILED!" 1>&2
         STATUS=1
         break
       fi
     elif "${debug}";then
-      echo "not exist: ${x}" > /dev/stderr
+      echo "not exist: ${x}" 1>&2
     fi
   done
   if "${debug}";then
-    echo "exit function ${FUNCNAME} return STATUS=${STATUS}" > /dev/stderr
+    echo "exit function ${FUNCNAME} return STATUS=${STATUS}" 1>&2
   fi
   return ${STATUS}
 }
@@ -634,35 +636,35 @@ function deploy_libs() {
 #check to see if server startup is required
 function conditional_startup() {
   if "${debug}";then
-    echo "enter function ${FUNCNAME}" > /dev/stderr
+    echo "enter function ${FUNCNAME}" 1>&2
   fi
   STATUS=0
   if [ "${islib}" = "1" ] || "${force_restart}";then
     if "${dryrun}";then
-      red_echo "DRYRUN: \"${initd_script}\" start" > /dev/stderr
+      red_echo "DRYRUN: \"${initd_script}\" start" 1>&2
       green_echo "DRYRUN: app server startup executed."
     else
       if [ "${timeout}" -eq "0" ];then
         if ! "${initd_script}" start;then
-          red_echo "Failed to start the app server." > /dev/stderr
+          red_echo "Failed to start the app server." 1>&2
           STATUS=1
         elif ! sleep 2 && "${initd_script}" status &> /dev/null;then
-          red_echo "App server failed after apparent successful startup." > /dev/stderr
+          red_echo "App server failed after apparent successful startup." 1>&2
           STATUS=1
         fi
       else
         if ! timeout ${timeout} "${initd_script}" start;then
-          red_echo "Failed to start the app server." > /dev/stderr
+          red_echo "Failed to start the app server." 1>&2
           STATUS=1
         elif ! sleep 2 && "${initd_script}" status &> /dev/null;then
-          red_echo "App server failed after apparent successful startup." > /dev/stderr
+          red_echo "App server failed after apparent successful startup." 1>&2
           STATUS=1
         fi
       fi
     fi
   fi
   if "${debug}";then
-    echo "exit function ${FUNCNAME} return STATUS=${STATUS}" > /dev/stderr
+    echo "exit function ${FUNCNAME} return STATUS=${STATUS}" 1>&2
   fi
   return ${STATUS}
 }
@@ -671,10 +673,10 @@ function conditional_startup() {
 #stderr will be used for error and debug messages
 #stdout will be used for successful status updates
 #the script will exit with a meaningful status code
-if_debug_print_environment > /dev/stderr
+if_debug_print_environment 1>&2
 if [ ! -d "${stage}" ];then
-  red_echo "stage=${stage} directory does not exist!" > /dev/stderr
-  echo "Preflight test failed...  Aborting." > /dev/stderr
+  red_echo "stage=${stage} directory does not exist!" 1>&2
+  echo "Preflight test failed...  Aborting." 1>&2
 fi
 cd "$stage" &> /dev/null && \
 preflight_check && \
@@ -685,7 +687,7 @@ deploy_libs && \
 conditional_startup
 STATUS=$?
 if [ "${debug}" = "true" ];then
-  echo "exit STATUS=${STATUS}" > /dev/stderr
+  echo "exit STATUS=${STATUS}" 1>&2
 fi
 
 exit ${STATUS}
