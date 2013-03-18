@@ -511,7 +511,7 @@ function backup_directories() {
     if "${dryrun}";then
       green_echo "${libdir} backup: ${backupdir}/${libdir}/${libdir}_${TIME}.tar.gz"
       if "${continuous_integration}";then
-        red_echo "DRYRUN: tar -czf \"${backupdir}/${libdir}/${libdir_}${TIME}.tar.gz\" \"${libdir}\"" "./env.sh" 1>&2
+        red_echo "DRYRUN: tar -czf \"${backupdir}/${libdir}/${libdir_}${TIME}.tar.gz\" \"${libdir}\" \"./env.sh\"" 1>&2
       else
         red_echo "DRYRUN: tar -czf \"${backupdir}/${libdir}/${libdir_}${TIME}.tar.gz\" \"${libdir}\"" 1>&2
       fi
