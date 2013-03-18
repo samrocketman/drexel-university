@@ -39,8 +39,11 @@ export PATH="${PATH}:/bin"
 #If values from user configuration are set then they will be used.  
 #Otherwise the DEFAULT CONFIGURATION will use ${var:-default_value}
 #It is recommended that you go through each default value and specify your configuration
+#source env.sh required for continuous integration; be sure to enable continuous_integration setting.
+#source /app/stage/env.sh
 #stage=""
 #second_stage=""
+#continuous_integration="false"
 #war_files=""
 #lib_files=""
 #appsprofile=""
@@ -63,6 +66,8 @@ export PATH="${PATH}:/bin"
 stage="${stage:-/opt/staging}"
 #secondary staging directory.  Check here if deployment files not in $stage.  Useful for cluster deployments.
 second_stage="${second_stage:-}"
+#CI server writes an env.sh file which is used as part of deployment in the stage directory, env.sh will be archived.
+continuous_integration="${continuous_integration:-false}"
 #war files to deploy to deploy directory; add space separated list of war files
 war_files="${war_files:-}"
 #jar files to deploy to lib directory; add space separated list of jar files
@@ -92,7 +97,7 @@ debug="${debug:-false}"
 #simulates a deployment without executing changes (true=simulate deployment, false=execute deployment)
 dryrun="${dryrun:-false}"
 #just some colored output eye candy in the terminal
-enable_colors="${enable_colors:-true}"
+enable_colors="${enable_colors:-false}"
 ########### END DEFAULT CONFIGURATION
 
 #clean up user defined paths in variables vars (basically remove trailing slash if there is one with parameter expansion)
@@ -142,7 +147,7 @@ SETSTYLE_UNDERLINE="echo -en \\033[4m"
 SETSTYLE_NORMAL="echo -en \\033[0m"
 
 #export environment variables
-GLOBAL_VARS="appsprofile appsuser backupdir debug deploydir dryrun enable_colors force_restart initd_script libdir lib_files move_or_copy second_stage stage timeout war_files"
+GLOBAL_VARS="appsprofile appsuser continuous_integration backupdir debug deploydir dryrun enable_colors force_restart initd_script libdir lib_files move_or_copy second_stage stage timeout war_files"
 export ${GLOBAL_VARS}
 
 #same as echo function except the whole text line is red
@@ -261,6 +266,9 @@ function colorize_env() {
 #show environment if debugging enabled
 function if_debug_print_environment() {
   if [ ! "${debug}" = "false" ];then
+    echo "===== $HOSTNAME env.sh file ====="
+    echo ""
+    cat /app/stage/env.sh
     echo ""
     bold_echo "== ENVIRONMENT VARIABLES =="
     if "${enable_colors}";then
@@ -277,7 +285,6 @@ function if_debug_print_environment() {
       yellow_echo -n "  yellow text" && echo " is used to highlight output which might be interesting"
       red_echo -n "  red text" && echo " is used to highlight changes which affect the running system"
     fi
-    echo ""
   fi
 }
 
@@ -317,6 +324,11 @@ function preflight_check() {
   #test to make sure /etc/init.d service script is executable
   if [ ! -x "${initd_script}" ];then
     echo "\${initd_script} ${initd_script} is not executable." 1>&2
+    STATUS=1
+  fi
+  #test continuous_integration environment variable (must be bool)
+  if [ ! "${continuous_integration}" = "true" ] && [ ! "${continuous_integration}" = "false" ];then
+    echo "continuous_integration=${continuous_integration} is not a valid option for continuous_integration!  Must be true or false." 1>&2
     STATUS=1
   fi
   #test force_restart environment variable (must be bool)
@@ -467,13 +479,29 @@ function backup_directories() {
   if "${dryrun}";then
     yellow_echo "DRYRUN: Changed working directory: $PWD" 1>&2
   fi
+  if "${continuous_integration}";then
+    if "${dryrun}";then
+      red_echo "DRYRUN: cp -f \"${stage}/env.sh\" ./"
+    else
+      cp -f "${stage}/env.sh" ./
+    fi
+  fi
   if [ "${isdeploy}" = "1" ];then
     if "${dryrun}";then
       green_echo "backup ${deploydir}: ${backupdir}/${deploydir}/${deploydir}_${TIME}.tar.gz"
-      red_echo "DRYRUN: tar -czf \"${backupdir}/${deploydir}/${deploydir}_${TIME}.tar.gz\" \"${deploydir}\"" 1>&2
+      if "${continuous_integration}";then
+        red_echo "DRYRUN: tar -czf \"${backupdir}/${deploydir}/${deploydir}_${TIME}.tar.gz\" \"${deploydir}\" \"./env.sh\"" 1>&2
+      else
+        red_echo "DRYRUN: tar -czf \"${backupdir}/${deploydir}/${deploydir}_${TIME}.tar.gz\" \"${deploydir}\"" 1>&2
+      fi
     else
       echo "backup ${deploydir}: ${backupdir}/${deploydir}/${deploydir}_${TIME}.tar.gz"
-      if ! tar -czf "${backupdir}/${deploydir}/${deploydir}_${TIME}.tar.gz" "${deploydir}";then
+      if "${continuous_integration}";then
+        tar -czf "${backupdir}/${deploydir}/${deploydir}_${TIME}.tar.gz" "${deploydir}" "./env.sh"
+      else
+        tar -czf "${backupdir}/${deploydir}/${deploydir}_${TIME}.tar.gz" "${deploydir}"
+      fi
+      if [ ! "$?" -eq "0" ];then
         echo "Backup FAILED!" 1>&2
         STATUS=1
       fi
@@ -482,13 +510,29 @@ function backup_directories() {
   if [ "${islib}" = "1" ];then
     if "${dryrun}";then
       green_echo "${libdir} backup: ${backupdir}/${libdir}/${libdir}_${TIME}.tar.gz"
-      red_echo "DRYRUN: tar -czf \"${backupdir}/${libdir}/${libdir_}${TIME}.tar.gz\" \"${libdir}\"" 1>&2
+      if "${continuous_integration}";then
+        red_echo "DRYRUN: tar -czf \"${backupdir}/${libdir}/${libdir_}${TIME}.tar.gz\" \"${libdir}\"" "./env.sh" 1>&2
+      else
+        red_echo "DRYRUN: tar -czf \"${backupdir}/${libdir}/${libdir_}${TIME}.tar.gz\" \"${libdir}\"" 1>&2
+      fi
     else
       echo "${libdir} backup: ${backupdir}/${libdir}/${libdir}_${TIME}.tar.gz"
-      if ! tar -czf "${backupdir}/${libdir}/${libdir}_${TIME}.tar.gz" "${libdir}";then
+      if "${continuous_integration}";then
+        tar -czf "${backupdir}/${libdir}/${libdir}_${TIME}.tar.gz" "${libdir}" "./env.sh"
+      else
+        tar -czf "${backupdir}/${libdir}/${libdir}_${TIME}.tar.gz" "${libdir}"
+      fi
+      if [ ! "$?" -eq "0" ];then
         echo "Backup FAILED!" 1>&2
         STATUS=1
       fi
+    fi
+  fi
+  if "${continuous_integration}";then
+    if "${dryrun}";then
+      red_echo "DRYRUN: rm -f \"./env.sh\""
+    else
+      rm -f "./env.sh"
     fi
   fi
   popd > /dev/null
@@ -678,7 +722,7 @@ if [ ! -d "${stage}" ];then
   red_echo "stage=${stage} directory does not exist!" 1>&2
   echo "Preflight test failed...  Aborting." 1>&2
 fi
-cd "$stage" &> /dev/null && \
+cd "${stage}" &> /dev/null && \
 preflight_check && \
 backup_directories && \
 conditional_shutdown && \
@@ -689,6 +733,6 @@ STATUS=$?
 if [ "${debug}" = "true" ];then
   echo "exit STATUS=${STATUS}" 1>&2
 fi
-
+echo "running as user $USER"
 exit ${STATUS}
 
