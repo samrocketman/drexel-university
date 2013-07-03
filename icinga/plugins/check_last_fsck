@@ -1,0 +1,119 @@
+#!/bin/bash
+#Created by Sam Gleske
+#Wed Jul  3 11:06:59 EDT 2013
+#Checks the date of the last successful fsck of a filesystem.
+
+while test $# -gt 0;do
+  case "$1" in
+    -h|--help)
+      cat <<EOF
+Created by Sam Gleske (c) Drexel University
+
+Synopsis:
+  $(basename ${0}) [options]
+
+Description:
+  Checks the date of the last successful fsck of a filesystem.
+
+Options:
+  -h    Help doc
+
+  -w N  Warning threshold in days since where N is integer.
+        Optional argument :- 120 days
+
+  -c N  Critical threshold in days since fsck.
+        Optional argument :- 180 days
+
+  -f FS The /dev path of the filesystem to analyze.
+
+Warnings:
+  - This script was written only for ext2/ext3/ext4 filesystems.
+  - dumpe2fs command must be available.
+EOF
+      exit 3
+      ;;
+    -w)
+      shift
+      if ! [[ "${1}" =~ ^[0-9]+$ ]];then
+        echo "-w must be followed by an integer!"
+        exit 3
+      fi
+      warn_thresh="${1}"
+      shift
+      ;;
+    -c)
+      shift
+      if ! [[ "${1}" =~ ^[0-9]+$ ]];then
+        echo "-c must be followed by an integer!"
+        exit 3
+      fi
+      crit_thresh="${1}"
+      shift
+      ;;
+    -f)
+      shift
+      dev_filesystem="${1}"
+      shift
+      ;;
+    *)
+      echo "Unknown argument: ${1}"
+      shift
+      break
+      ;;
+  esac
+done
+
+######## USER SETTINGS DEFAULT VALUES
+
+#take the first filesystem from the mount command
+#dev_filesystem="${dev_filesystem:-$(mount 2>/dev/null | head -n1 | awk '{print $1}')}"
+#thresholds are in days since the last fsck
+warn_thresh="${warn_thresh:-120}"
+crit_thresh="${crit_thresh:-180}"
+
+######## END USER SETTINGS
+
+######## ICINGA EXIT CODES
+OK="0"
+WARNING="1"
+CRITICAL="2"
+UNKNOWN="3"
+######## END ICINGA EXIT CODES
+
+
+if [ -z "${dev_filesystem}" ];then
+  echo "Dev filesystem must not be null!"
+  exit ${UNKNOWN}
+elif [ ! -b "${dev_filesystem}" ];then
+  echo "Filesystem path (-f) ${dev_filesystem} is not a block device!"
+  exit ${UNKNOWN}
+elif ! [ "${crit_thresh}" -ge "0" -a "${warn_thresh}" -ge "0" ];then
+  echo "-c or -w must not be followed by a negative integer!"
+  exit ${UNKNOWN}
+elif [ "$((${crit_thresh} - ${warn_thresh}))" -lt "0" ];then
+  echo "Warning threshold (-w) may not be greater than the Critical threshold (-c)."
+  exit ${UNKNOWN}
+fi
+
+#testing arguments
+#echo "crit=${crit_thresh}"
+#echo "warn=${warn_thresh}"
+#echo "dev_filesystem=${dev_filesystem}"
+#exit
+
+#Run some time calculations on the fsck information of a filesystem
+current_time="$(date +%s)"
+last_fsck="$(date -d "$(dumpe2fs -h ${dev_filesystem} 2> /dev/null | grep 'Last checked:' | sed 's/^Last checked:\s\+//')" +%s)"
+days_since_fsck="$(( ( ${current_time} - ${last_fsck} ) / 3600 / 24 ))"
+filesystem_state="$(dumpe2fs -h ${dev_filesystem} 2> /dev/null | grep '^Filesystem state:' | sed 's/^Filesystem state:\s\+//')"
+
+#set the status to OK before processing
+STATUS="${OK}"
+if [ "${days_since_fsck}" -ge "${crit_thresh}" ] || [ "${filesystem_state}" != "clean" ];then
+  STATUS="${CRITICAL}"
+elif [ "${days_since_fsck}" -ge "${warn_thresh}" ];then
+  STATUS="{WARNING}"
+fi
+MESSAGE="FS_State=${filesystem_state}; Last_fsck=${days_since_fsck} days; FS=${dev_filesystem}"
+echo "${MESSAGE}"
+exit ${STATUS}
