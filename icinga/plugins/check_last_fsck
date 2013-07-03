@@ -70,6 +70,7 @@ done
 #thresholds are in days since the last fsck
 warn_thresh="${warn_thresh:-120}"
 crit_thresh="${crit_thresh:-180}"
+dumpe2fs_bin="/sbin/dumpe2fs"
 
 ######## END USER SETTINGS
 
@@ -82,7 +83,7 @@ UNKNOWN="3"
 
 
 if [ -z "${dev_filesystem}" ];then
-  echo "Dev filesystem must not be null!"
+  echo "Filesystem path (-f) must be specified!"
   exit ${UNKNOWN}
 elif [ ! -b "${dev_filesystem}" ];then
   echo "Filesystem path (-f) ${dev_filesystem} is not a block device!"
@@ -92,6 +93,9 @@ elif ! [ "${crit_thresh}" -ge "0" -a "${warn_thresh}" -ge "0" ];then
   exit ${UNKNOWN}
 elif [ "$((${crit_thresh} - ${warn_thresh}))" -lt "0" ];then
   echo "Warning threshold (-w) may not be greater than the Critical threshold (-c)."
+  exit ${UNKNOWN}
+elif [ ! -x "${dumpe2fs_bin}" ];then
+  echo "dumpe2fs does not exist or permission denied."
   exit ${UNKNOWN}
 fi
 
@@ -103,9 +107,9 @@ fi
 
 #Run some time calculations on the fsck information of a filesystem
 current_time="$(date +%s)"
-last_fsck="$(date -d "$(dumpe2fs -h ${dev_filesystem} 2> /dev/null | grep 'Last checked:' | sed 's/^Last checked:\s\+//')" +%s)"
+last_fsck="$(date -d "$(${dumpe2fs_bin} -h ${dev_filesystem} 2> /dev/null | grep 'Last checked:' | sed 's/^Last checked:\s\+//')" +%s)"
 days_since_fsck="$(( ( ${current_time} - ${last_fsck} ) / 3600 / 24 ))"
-filesystem_state="$(dumpe2fs -h ${dev_filesystem} 2> /dev/null | grep '^Filesystem state:' | sed 's/^Filesystem state:\s\+//')"
+filesystem_state="$(${dumpe2fs_bin} -h ${dev_filesystem} 2> /dev/null | grep '^Filesystem state:' | sed 's/^Filesystem state:\s\+//')"
 
 #set the status to OK before processing
 STATUS="${OK}"
