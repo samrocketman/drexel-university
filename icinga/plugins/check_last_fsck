@@ -98,7 +98,7 @@ elif [ ! -x "${dumpe2fs_bin}" ];then
   echo "dumpe2fs does not exist or permission denied."
   exit ${UNKNOWN}
 elif [ ! -r "${dev_filesystem}" -a ! -w "${dev_filesystem}" ];then
-  echo "${dev_filesystem} does not have +rw permissions for user."
+  echo "${dev_filesystem} does not have +rw permissions for user $USER."
   exit ${UNKNOWN}
 fi
 
