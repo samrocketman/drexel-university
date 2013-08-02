@@ -119,7 +119,7 @@ STATUS="${OK}"
 if [ "${days_since_fsck}" -ge "${crit_thresh}" ] || [ "${filesystem_state}" != "clean" ];then
   STATUS="${CRITICAL}"
 elif [ "${days_since_fsck}" -ge "${warn_thresh}" ];then
-  STATUS="{WARNING}"
+  STATUS="${WARNING}"
 fi
 MESSAGE="FS_State=${filesystem_state}; Last_fsck=${days_since_fsck} days; FS=${dev_filesystem}"
 echo "${MESSAGE}"
