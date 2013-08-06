@@ -41,3 +41,24 @@ Check that there aren't any bad `known_hosts` fingerprints for clusters host nam
     servercount | knownhosts.sh
 
 The remaining scripts are fairly standalone.
+
+----
+## wasted-ram-updates.py
+
+Ever hear about Linux being able to update without ever need to be restarted (with exception for a few critical packages)?  Ever wonder how to figure out which services need to actually be restarted after a large update of hundreds of packages?  With `wasted-ram-updates.py` you no longer need to wonder.
+
+`wasted-ram-updates.py` helps to resolve these questions by showing which running processes are using files in memory that have been deleted on disk.  This lets you know that there is likely an outdated library being used.  If you restart the daemon associated with this process then it will use the updated copy of the library.
+
+### Example usage
+
+Just display an overall summary
+
+    wasted-ram-updates.py summary
+
+Organize the output by deleted file handle (I've found this to be less useful for accomplishing a system update).
+
+    wasted-ram-updates.py
+
+Organize the output by process ID and show a heirarchy of deleted file handles as children to the PIDs.  This is the most useful command for determining which services to restart.
+
+    wasted-ram-updates.py pids
