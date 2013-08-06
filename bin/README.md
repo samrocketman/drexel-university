@@ -45,9 +45,21 @@ The remaining scripts are fairly standalone.
 ----
 ## wasted-ram-updates.py
 
-Ever hear about Linux being able to update without ever need to be restarted (with exception for a few critical packages)?  Ever wonder how to figure out which services need to actually be restarted after a large update of hundreds of packages?  With `wasted-ram-updates.py` you no longer need to wonder.
+Ever hear about Linux being able to update without ever needing to be restarted (with exception for a few critical packages)?  Ever wonder how to figure out which services need to actually be restarted after a large update of hundreds of packages?  With `wasted-ram-updates.py` you no longer need to wonder.
 
 `wasted-ram-updates.py` helps to resolve these questions by showing which running processes are using files in memory that have been deleted on disk.  This lets you know that there is likely an outdated library being used.  If you restart the daemon associated with this process then it will use the updated copy of the library.
+
+### List of packages which require a restart
+
+Over time I've encountered a small list of critical packages which require a restart of the Linux OS.  Here's a non-comprehensive list of which I'm aware.  Feel free to open an [issue](https://github.com/sag47/drexel-university/issues) letting me know of another package which requires a system reboot.
+
+* dbus (used by `/sbin/init` which is pid 1)
+* glibc
+* kernel
+
+Other than that you should be able to simply restart the associated service.
+
+_Please note: some programs regularly create and delete temporary files which will show up in `wasted-ram-updates.py`.  This is normal and does not require a service restart for this case._
 
 ### Example usage
 
