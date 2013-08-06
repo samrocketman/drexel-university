@@ -3,7 +3,14 @@
 ----
 ## clusterssh helper scripts
 
-I wrote a few scripts which help me maintain my `/etc/clusters` file.  I maintain my `/etc/clusters` file with a standard naming convention.  The first line has an `All_clusters` alias.  Its only purpose is to be an alias for all aliases in the `/etc/clusters` file.  From there every alias starts with one of two standard prefixes: `cluster_` or `host_`.
+I use the following helper scripts to maintain the `/etc/clusters` file:
+
+* `knownhosts.sh`
+* `missing_from_all_clusters.sh`
+* `servercount`
+* `sort_clusters`
+
+I maintain my `/etc/clusters` file with a standard naming convention.  The first line has an `All_clusters` alias.  Its only purpose is to be an alias for all aliases in the `/etc/clusters` file.  From there every alias starts with one of two standard prefixes: `cluster_` or `host_`.
 
 Here is a sample `/etc/clusters` file using that naming convention.
 
@@ -14,13 +21,6 @@ Here is a sample `/etc/clusters` file using that naming convention.
     cluster_dns ns1.domain.com ns2.domain.com
     
     host_Config_management someconfigmanagement.domain.com
-
-I use the following helper scripts to maintain the `/etc/clusters` file:
-
-* `knownhosts.sh`
-* `missing_from_all_clusters.sh`
-* `servercount`
-* `sort_clusters`
 
 `knownhosts.sh` - This script reads stdin a list of host names, queries the ssh fingerprint, and checks to see if that known host exists in `~/.ssh/known_hosts`.  If it exists then it outputs nothing.  If there's any missing (or possibly incorrect) then it will output only the problem hosts.  If no hosts have any problems then it exits with a proper success exit code.  This can be used with `servercount`.
 
