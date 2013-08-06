@@ -1,0 +1,67 @@
+#!/bin/bash
+#Created by Sam Gleske
+#Tue Aug  6 10:35:08 EDT 2013
+#Linux 3.8.0-27-generic x86_64
+#GNU bash, version 4.2.25(1)-release (x86_64-pc-linux-gnu)
+
+HEADERS_VERSION="v0.1.0"
+
+#Description:
+#  Pulls http headers from a url while discarding content using curl
+
+function err() {
+  #echo to stderr rather than stdout
+  echo "${1}" 1>&2
+}
+function getheaders() {
+  #http request and response headers
+  #the 2>&1 1>/dev/null wires the default stdout to /dev/null and the default stderr to stdout so it can be processed by grep
+  curl -v -o /dev/null "${1}" 2>&1 1>/dev/null | \grep "^\(<\|>\)"
+}
+function displayhelp() {
+  err "headers ${HEADERS_VERSION} by Sam Gleske"
+  err ""
+  err "SYNOPSIS"
+  err "  headers [-h|--help] URL"
+  err ""
+  err "DESCRIPTION"
+  err "  This program uses curl to obtain the headers of an http request"
+  err "  while discarding the response from the request.  If you want to get"
+  err "  the full http response then using curl is best (see CURL NOTES)."
+  err ""
+  err "OPTIONS"
+  err "  -h,--help        Display this help guide."
+  err "  URL              A standard curl url."
+  err ""
+  err "USAGE"
+  err "  Take a file name as an argument."
+  err "    headers http://server.com/file.html"
+  err "  Process stdin assuming all input are URLs"
+  err "    echo http://server.com/file.html | headers"
+  err "  Interactive command line with one URL per line"
+  err "    headers"
+  err ""
+  err "CURL NOTES"
+  err "  To get the full http request and response use verbose"
+  err "    curl -v http://server.com/file.html"
+  err "  To get the full response only printed to stdout"
+  err "    curl -D - http://server.com/file.html"
+}
+function main() {
+  if [ "${1}" = "-h" -o "${1}" = "--help" ];then
+    displayhelp
+    exit 1
+  elif [ ! "${#}" = "0" ];then
+    while (( "$#" ));do
+      getheaders "${1}"
+      shift
+    done
+  else
+    #assume since there's no arguments for help and no arguments then we must want to process stdin
+    while read line;do
+      getheaders "${line}"
+    done
+  fi
+}
+
+main $*
