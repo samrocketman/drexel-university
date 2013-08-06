@@ -1,0 +1,10 @@
+#set up some common aliases
+if ! which vim &> /dev/null;then
+  alias vim="vi"
+fi
+alias x='exit'
+
+#other terminal fun stuff
+PS1="\`if [ \$? = 0 ]; then echo \[\e[33m\]^_^\[\e[0m\]; else echo \[\e[31m\]O_O\[\e[0m\]; fi\`[\u@\h:\w]\\$ "
+EDITOR="vim"
+export PS1 EDITOR

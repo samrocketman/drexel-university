@@ -35,3 +35,35 @@ set autoindent
 if &t_Co > 1 
   syntax enable
 endif
+
+set is
+
+"This executes a command and puts output into a throw away scratch pad
+"source: http://vim.wikia.com/wiki/Display_output_of_shell_commands_in_new_window
+function! s:ExecuteInShell(command, bang)
+  let _ = a:bang != '' ? s:_ : a:command == '' ? '' : join(map(split(a:command), 'expand(v:val)'))
+  if (_ != '')
+    let s:_ = _
+    let bufnr = bufnr('%')
+    let winnr = bufwinnr('^' . _ . '$')
+    silent! execute  winnr < 0 ? 'belowright new ' . fnameescape(_) : winnr . 'wincmd w'
+    setlocal buftype=nowrite bufhidden=wipe nobuflisted noswapfile wrap number
+    silent! :%d
+    let message = 'Execute ' . _ . '...'
+    call append(0, message)
+    echo message
+    silent! 2d | resize 1 | redraw
+    silent! execute 'silent! %!'. _
+    silent! execute 'resize ' . line('$')
+    silent! execute 'syntax on'
+    silent! execute 'autocmd BufUnload <buffer> execute bufwinnr(' . bufnr . ') . ''wincmd w'''
+    silent! execute 'autocmd BufEnter <buffer> execute ''resize '' .  line(''$'')'
+    silent! execute 'nnoremap <silent> <buffer> <CR> :call <SID>ExecuteInShell(''' . _ . ''', '''')<CR>'
+    silent! execute 'nnoremap <silent> <buffer> <LocalLeader>r :call <SID>ExecuteInShell(''' . _ . ''', '''')<CR>'
+    silent! execute 'nnoremap <silent> <buffer> <LocalLeader>g :execute bufwinnr(' . bufnr . ') . ''wincmd w''<CR>'
+    nnoremap <silent> <buffer> <C-W>_ :execute 'resize ' . line('$')<CR>
+    silent! syntax on
+  endif
+endfunction
+command! -complete=shellcmd -nargs=* -bang Scratchpad call s:ExecuteInShell(<q-args>, '<bang>')
+command! -complete=shellcmd -nargs=* -bang Scp call s:ExecuteInShell(<q-args>, '<bang>')
