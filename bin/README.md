@@ -40,6 +40,11 @@ Check that there aren't any bad `known_hosts` fingerprints for clusters host nam
 
     servercount | knownhosts.sh
 
+Generage a list of ip addresses associated with all of the hosts.
+
+    servercount | while read server;do dig +short ${server};done
+    servercount | while read server;do echo "$(dig +short ${server}) ${server}";done
+
 The remaining scripts are fairly standalone.
 
 ----
