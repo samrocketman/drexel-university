@@ -3,6 +3,9 @@ if ! which vim &> /dev/null;then
   alias vim="vi"
 fi
 alias x='exit'
+alias l.='ls -d .* --color=auto'
+alias ll='ls -l --color=auto'
+alias ls='ls --color=auto'
 
 #other terminal fun stuff
 if echo "${PATH}" | grep -v "~/bin" &> /dev/null;then
