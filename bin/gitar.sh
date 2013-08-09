@@ -77,9 +77,9 @@ function preflight(){
     if [ -d ".git" ];then
       err "The current directory must not be a git repository!"
       STATUS=1
-    elif [ ! -z "$(find . -type d -name .git | head -n1)" ];then
+    elif [ ! -z "$(find "${1}" -type d -name .git | head -n1)" ];then
       err "Error, a nested git repository was found.  This is not recommended so will abort."
-      err "To find location run: find . -type d -name .git"
+      err "To find location run: find \"${1}\" -type d -name .git"
       STATUS=1
     fi
     if [ -f "${1}.gitar" ];then
@@ -165,8 +165,7 @@ function success(){
     err "SUCCESS!"
     err ""
     err "Your gitar archive is ready.  To decompress run the following commands."
-    err "tar -xf \"${1}.gitar\""
-    err "./gitar.sh"
+    err "tar -xf \"${1}.gitar\" && ./gintar.sh"
     err ""
   elif [ "${BASENAME}" = "gintar.sh" ];then
     err "Successfully extracted!"
@@ -182,12 +181,12 @@ BASENAME="$(basename ${0})"
 
 #remove possible trailing slash
 INPUT="${1%/}"
-if [ ! -d "${INPUT}" ];then
-  err "ERROR: ${INPUT} must be a directory!"
-  exit 1
-fi
 
 if [ "${BASENAME}" = "gitar.sh" ];then
+  if [ ! -d "${INPUT}" ];then
+    err "ERROR: ${INPUT} must be a directory!"
+    exit 1
+  fi
   #start deduplication and compression into an archive
   if [ "$#" == "0" ];then
     err "You must provide an argument!"

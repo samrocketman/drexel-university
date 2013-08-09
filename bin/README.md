@@ -84,7 +84,7 @@ Organize the output by process ID and show a heirarchy of deleted file handles a
 ## gitar.sh - A simple deduplication and compression script
 This is an [original idea by Tom Dalling](http://tomdalling.com/blog/random-stuff/using-git-for-hacky-archive-deduplication/).
 
-`gitar.sh` is a simple deduplication and compression script.  It uses git to deduplicate data and then other compression algorithms to compress data.  This short script was made for when you have to compress a large amount of duplicated files.  It also comes with a handly little utility, `gintar.sh`, for decompressing the archive on the receiving end.  See Usage section for more information.
+[gitar.sh](https://github.com/sag47/drexel-university/blob/master/bin/gitar.sh) is a simple deduplication and compression script.  It uses git to deduplicate data and then other compression algorithms to compress data.  This short script was made for when you have to compress a large amount of duplicated files.  It also comes with a handly little utility, `gintar.sh`, for decompressing the archive on the receiving end.  See Usage section for more information.
 
 `gitar.sh` assumes you do not have [lrzip](https://github.com/ckolivas/lrzip) readily available.  lrzip can compress better and deduplicate better than this script.  Also, this script has known limitations which are not bound to lrzip such as not being able to compress git repositories.  gitar.sh is meant as a quick hack 'n slash dedupe and compress.  See the benchmarks for when I tested gitar.sh against other compression methods.
 
@@ -115,8 +115,7 @@ Subshell the compressing of an archive and set the compression level to 2
 
 Decompress a `gitar` archive.
 
-    tar -xf "somefile.gitar"
-    ./gintar.sh
+    tar -xf "somefile.gitar" && ./gintar.sh
 
 ### Benchmarks of gitar.sh hack vs other utilities
 
