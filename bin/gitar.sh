@@ -74,6 +74,10 @@ function preflight(){
   fi
   #method specific preflight check based on the script name
   if [ "${BASENAME}" = "gitar.sh" ];then
+    if [ ! -d "${1}" ];then
+      err "ERROR: ${1} must be a directory!"
+      exit 1
+    fi
     if [ -d ".git" ];then
       err "The current directory must not be a git repository!"
       STATUS=1
@@ -183,13 +187,10 @@ BASENAME="$(basename ${0})"
 INPUT="${1%/}"
 
 if [ "${BASENAME}" = "gitar.sh" ];then
-  if [ ! -d "${INPUT}" ];then
-    err "ERROR: ${INPUT} must be a directory!"
-    exit 1
-  fi
   #start deduplication and compression into an archive
   if [ "$#" == "0" ];then
     err "You must provide an argument!"
+    err "Help: gitar.sh somedirectory"
     exit 1
   fi
   preflight "${INPUT}" && gitar "${INPUT}" && success "${INPUT}"
