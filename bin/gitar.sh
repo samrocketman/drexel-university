@@ -83,7 +83,10 @@ function preflight(){
       STATUS=1
     elif [ ! -z "$(find "${1}" -type d -name .git | head -n1)" ];then
       err "Error, a nested git repository was found.  This is not recommended so will abort."
-      err "To find location run: find \"${1}\" -type d -name .git"
+      err "$(find "${1}" -type d -name .git | head -n1)"
+      err ""
+      err "To find potential problems like this run: "
+      err "find \"${1}\" -type d -name .git"
       STATUS=1
     fi
     if [ -f "${1}.gitar" ];then
