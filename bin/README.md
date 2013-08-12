@@ -123,8 +123,6 @@ Decompress a `gitar` archive.
 
 ### Benchmarks of gitar.sh hack vs other utilities
 
-_Note: more compression options have been added to gitar.sh since this benchmark_
-
 #### Environment
 
 * [Tested Repository](https://github.com/tomdalling/opengl-series) with git directories removed.
@@ -155,8 +153,19 @@ For the ratios I used max compression for all utilities (`gzip -9`, and `bzip -9
     95M     opengl-series.tar     tar             72.0%
     30M     opengl-series.tgz     tar+gzip        22.7%
     27M     opengl-series.tbz2    tar+bzip2       20.5%
-    5.9M    opengl-series.gitar   git+tar+bzip2   4.5%
+    5.8M    opengl-series.gitar   git+tar+lzma    4.4%
     4.4M    opengl-series.tar.lrz tar+lrzip       3.3%
+
+Compression ratios for different gitar levels.
+
+    Size    Name                               Type           % of original size
+    132M    opengl-series                      Uncompressed   100.0%
+    95M     0-opengl-series.tar                tar            72.0%
+    9.0M    1-opengl-series.gitar.dedupeonly   gitar-1        6.8%
+    6.3M    2-opengl-series.gitar.optimized    gitar-2        4.8%
+    5.9M    3-opengl-series.gitar.gzip         gitar-3        4.5%
+    5.9M    4-opengl-series.gitar.bzip2        gitar-4        4.5%
+    5.8M    5-opengl-series.gitar.lzma         gitar-5        4.4%
 
 #### Compression times
 I used the `time` utility and took an average of 3 runs for each.
@@ -166,8 +175,19 @@ I used the `time` utility and took an average of 3 runs for each.
     opengl-series.tar     tar             0m0.707s
     opengl-series.tgz     tar+gzip        0m7.200s
     opengl-series.tbz2    tar+bzip2       0m11.521s
-    opengl-series.gitar   git+tar+bzip2   0m3.977s
+    opengl-series.gitar   git+tar+lzma    0m5.292s
     opengl-series.tar.lrz tar+lrzip       0m24.338s
+
+Compression times for different gitar levels.
+
+    Name                  Type           real value (from time command)
+    opengl-series         Uncompressed   0m0.000s (no command was executed)
+    opengl-series.tar     tar            0m0.707s
+    opengl-series.gitar   gitar-1        0m1.077s
+    opengl-series.gitar   gitar-2        0m3.818s
+    opengl-series.gitar   gitar-3        0m4.000s
+    opengl-series.gitar   gitar-4        0m4.632s
+    opengl-series.gitar   gitar-5        0m5.292s
 
 #### Benchmark Conclusion
 If you want the absolute best compression ratio with the best deduplication then `lrzip` is the utility for you.  However, based on my benchmarks `gitar.sh` achieved a similar ratio in less than one sixth of the time.  `gitar.sh` is a little less user friendly and there are some known drawbacks to using it.  However, if none of these known issues are a problem then `gitar.sh` is great for being fast and highly compressed.  When in doubt of any of the known issues or you're looking for the best compression ratios then `lrzip` is the best candidate.
