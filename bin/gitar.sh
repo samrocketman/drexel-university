@@ -100,7 +100,7 @@ function preflight(){
     if [ -d ".git" ];then
       err "The current directory must not be a git repository!"
       STATUS=1
-    elif ! ${testmode} && [ ! -z "$(find "${1}" -type d -name .git | head -n1)" ];then
+    elif [ ! -z "$(find "${1}" -type d -name .git 2> /dev/null | head -n1 2> /dev/null)" ];then
       err "Error, a nested git repository was found.  This is not recommended so will abort."
       err "$(find "${1}" -type d -name .git | head -n1)"
       err ""
