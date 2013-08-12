@@ -138,7 +138,7 @@ function gitar(){
   if [ ! "$?" = "0" ];then
     STATUS=1
   fi
-  if [ ! "${compression_type}" = "0" ];then
+  if [ ! "${compression_list[compression_type]}" = "dedupe_only" ];then
     git gc --aggressive
     if [ ! "$?" = "0" ];then
       STATUS=1
@@ -312,10 +312,10 @@ if [ "${BASENAME}" = "gitar.sh" ];then
     err "You must provide an argument!"
     err "Help: gitar.sh somedirectory"
     exit 1
-  elif [ ! -e "test" ] && [ "${1}" = "test" ];then
+  elif [ ! -e "test" ] && [ "${INPUT}" = "test" ];then
     #this helps me test the program
     run_tests
-  elif [ ! -e "clean-test" ] && [ "${1}" = "clean-test" ];then
+  elif [ ! -e "clean-test" ] && [ "${INPUT}" = "clean-test" ];then
     #this cleans up the test data
     clean_tests
   fi
