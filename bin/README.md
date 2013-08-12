@@ -97,6 +97,8 @@ You can set different compression options with the `compression_type` environmen
 4. deduplication+optimized git+bzip2 compression
 5. deduplication+optimized git+lzma compression
 
+Sample bash command for setting compression.
+
     export compression_type=3
 
 ### Known Limitations/Won't Fix
