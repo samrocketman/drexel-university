@@ -9,8 +9,12 @@ alias ls='ls --color=auto'
 
 #other terminal fun stuff
 if echo "${PATH}" | grep -v "~/bin" &> /dev/null;then
-  PATH="${PATH}:~/bin"
+  export PATH="${PATH}:~/bin"
 fi
-PS1="\`if [ \$? = 0 ]; then echo \[\e[33m\]^_^\[\e[0m\]; else echo \[\e[31m\]O_O\[\e[0m\]; fi\`[\u@\h:\w]\\$ "
-EDITOR="vim"
-export EDITOR PATH PS1
+export PS1="\`if [ \$? = 0 ]; then echo \[\e[33m\]^_^\[\e[0m\]; else echo \[\e[31m\]O_O\[\e[0m\]; fi\`[\u@\h:\w]\\$ "
+export EDITOR="vim"
+if [ "$(id -u)" -eq "0" ];then
+  export HOME="/root"
+  export HISTFILE="$HOME/.bash_history"
+  export MAIL="/var/spool/mail/root"
+fi
