@@ -89,12 +89,14 @@ This is an [original idea by Tom Dalling](http://tomdalling.com/blog/random-stuf
 `gitar.sh` assumes you do not have [lrzip](https://github.com/ckolivas/lrzip) readily available.  lrzip can compress better and deduplicate better than this script.  Also, this script has known limitations which are not bound to lrzip such as not being able to compress git repositories.  gitar.sh is meant as a quick hack 'n slash dedupe and compress.  See the benchmarks for when I tested gitar.sh against other compression methods.
 
 ### Compression options
-You can set different compression options with the `compression_type` environment variable.
+You can set different compression options with the `compression_type` environment variable.  The numbers are ordered from minimum compression to max compression.
 
-    #  0 - no compression, just deduplication
-    #  1 - deduplication+optimized git compression
-    #  2 - deduplication+optimized git+gzip compression
-    #  3 - deduplication+optimized git+bzip2 compression
+1. no compression, just deduplication
+2. deduplication+optimized git compression
+3. deduplication+optimized git+gzip compression
+4. deduplication+optimized git+bzip2 compression
+5. deduplication+optimized git+lzma compression
+
     export compression_type=3
 
 ### Known Limitations/Won't Fix
@@ -118,6 +120,8 @@ Decompress a `gitar` archive.
     tar -xf "somefile.gitar" && ./gintar.sh
 
 ### Benchmarks of gitar.sh hack vs other utilities
+
+_Note: more compression options have been added to gitar.sh since this benchmark_
 
 #### Environment
 

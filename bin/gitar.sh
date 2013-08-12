@@ -35,13 +35,21 @@
 ######################################################################
 
 #compression types ordered from least to greatest
-#  0 - no compression, just deduplication
-#  1 - deduplication+optimized git compression
-#  2 - deduplication+optimized git+gzip compression
-#  3 - deduplication+optimized git+bzip2 compression
+#  1 - no compression, just deduplication
+#  2 - deduplication+optimized git compression
+#  3 - deduplication+optimized git+gzip compression
+#  4 - deduplication+optimized git+bzip2 compression
+#  5 - deduplication+optimized git+lzma compression
 compression_type="${compression_type:-3}"
 
+#Compression list helps to make the logic more human readable (e.g. in preflight check function)
+compression_list[1]="dedupe_only"
+compression_list[2]="optimized"
+compression_list[3]="gzip"
+compression_list[4]="bzip2"
+compression_list[5]="lzma"
 
+testmode="false"
 
 ######################################################################
 # List of functions
@@ -53,6 +61,8 @@ function err(){
 function write_gintar(){
   #copies the currently running program to gintar.sh for unarchiving later
   cp "$0" "./gintar.sh"
+  #grab the current compression_type out of $0
+  sed -i '0,/compression_type="${compression_type:-[0-9]}"/{s#\(compression_type="${compression_type:-\)[0-9]\(}"\)#\1'${compression_type}'\2#}' "./gintar.sh"
 }
 function preflight(){
   STATUS=0
@@ -68,20 +78,29 @@ function preflight(){
     err "tar executable is missing: tar package"
     STATUS=1
   fi
-  if [ ! -x "$(which bzip2)" ];then
+  #prerequisite only based on the current algorithm (gzip, bzip2, or lzma)
+  if [ "gzip" = "${compression_list[compression_type]}" ] && [ ! -x "$(which gzip)" ];then
+    err "gzip executable is missing: gzip package"
+    STATUS=1
+  fi
+  if [ "bzip2" = "${compression_list[compression_type]}" ] && [ ! -x "$(which bzip2)" ];then
     err "bzip2 executable is missing: bzip2 package"
+    STATUS=1
+  fi
+  if [ "lzma" = "${compression_list[compression_type]}" ] && [ ! -x "$(which lzma)" ];then
+    err "lzma executable is missing: xz-lzma package"
     STATUS=1
   fi
   #method specific preflight check based on the script name
   if [ "${BASENAME}" = "gitar.sh" ];then
-    if [ ! -d "${1}" ];then
+    if ! ${testmode} && [ ! -d "${1}" ];then
       err "ERROR: ${1} must be a directory!"
       exit 1
     fi
     if [ -d ".git" ];then
       err "The current directory must not be a git repository!"
       STATUS=1
-    elif [ ! -z "$(find "${1}" -type d -name .git | head -n1)" ];then
+    elif ! ${testmode} && [ ! -z "$(find "${1}" -type d -name .git | head -n1)" ];then
       err "Error, a nested git repository was found.  This is not recommended so will abort."
       err "$(find "${1}" -type d -name .git | head -n1)"
       err ""
@@ -129,16 +148,24 @@ function gitar(){
   if [ ! "$?" = "0" ];then
     STATUS=1
   fi
-  if [ "${compression_type}" = "0" -o "${compression_type}" = "1" ];then
+  if [ "${compression_list[compression_type]}" = "dedupe_only" -o "${compression_list[compression_type]}" = "optimized" ];then
     tar -cf "${1}".gitar .git gintar.sh
-  elif [ "${compression_type}" = "2" ];then
+  elif [ "${compression_list[compression_type]}" = "gzip" ];then
     #tar -czf "${1}".gitar .git gintar.sh
     tar -cf - .git gintar.sh | gzip -9 - > "${1}".gitar
-  elif [ "${compression_type}" = "3" ];then
+  elif [ "${compression_list[compression_type]}" = "bzip2" ];then
     #tar -cjf "${1}".gitar .git gintar.sh
     tar -cf - .git gintar.sh | bzip2 -9 - > "${1}".gitar
+  elif [ "${compression_list[compression_type]}" = "lzma" ];then
+    tar -cf - .git gintar.sh | lzma -9 - > "${1}".gitar
   else
-    err "Invalid compression type specified in gitar.sh"
+    err "Invalid compression type specified in gitar.sh.  Choose"
+    err "compression_type=[1-5] where 1 is least and 5 is most compression."
+    err "1 - no compression, just deduplication"
+    err "2 - deduplication+optimized git compression"
+    err "3 - deduplication+optimized git+gzip compression"
+    err "4 - deduplication+optimized git+bzip2 compression"
+    err "5 - deduplication+optimized git+lzma compression"
     STATUS=1
   fi
   if [ ! "$?" = "0" ];then
@@ -179,6 +206,96 @@ function success(){
   fi
   exit 0
 }
+
+######################################################################
+# Application testing functions
+######################################################################
+
+function run_tests(){
+  testmode="true"
+  preflight
+  echo -n "Cloning opengl-series.git... " 1>&2
+  git clone https://github.com/tomdalling/opengl-series.git &>/dev/null && err "success" || err "failed"
+  echo -n "Cleaning up git directories... " 1>&2
+  rm -rf opengl-series/.git && err "success" || err "failed"
+  err "Runing compression tests:"
+  echo -n "  0-opengl-series.tar... " 1>&2
+  tar -cf 0-opengl-series.tar opengl-series &> /dev/null && err "success" || err "failed"
+  #run compression tests with each type of compression
+  export compression_type=1
+  try_compress
+  try_decompress
+  export compression_type=2
+  try_compress
+  try_decompress
+  export compression_type=3
+  try_compress
+  try_decompress
+  export compression_type=4
+  try_compress
+  try_decompress
+  export compression_type=5
+  try_compress
+  try_decompress
+  exit 1
+}
+function try_compress(){
+  STATUS=0
+  filename="${compression_type}-opengl-series.gitar.${compression_list[compression_type]}"
+  echo -n "  ${filename}... " 1>&2
+  "${0}" opengl-series &> /dev/null 
+  if [ ! "$?" -eq "0" ];then
+    STATUS=1
+  fi
+  mv -f opengl-series.gitar "${filename}" &> /dev/null
+  if [ ! "$?" -eq "0" ];then
+    STATUS=1
+  fi
+  if [ "${STATUS}" -eq "0" ];then
+    err "success"
+  else
+    err "failed"
+    err "For more information run the following."
+    err "(export compression_type=${compression_type};bash -x $0 opengl-series)"
+  fi
+  return ${STATUS}
+}
+function try_decompress(){
+  STATUS=0
+  filename="${compression_type}-opengl-series.gitar.${compression_list[compression_type]}"
+  echo -n "  ${filename} decompress... " 1>&2
+  mkdir -p "/tmp/${filename}" &> /dev/null
+  pushd "/tmp/${filename}" &> /dev/null
+  tar -xf ~1/"${filename}" &> /dev/null
+  if [ ! "$?" -eq "0" ];then
+    STATUS=1
+  fi
+  ./gintar.sh &> /dev/null
+  if [ ! "$?" -eq "0" ];then
+    STATUS=1
+  fi
+  popd &> /dev/null
+  if [ "${STATUS}" -eq "0" ];then
+    err "success"
+  else
+    err "failed"
+    err "For more information run the following."
+    err '(mkdir /tmp/'${filename}';export compression_type=${compression_type};pushd /tmp/'${filename}';tar -xf ~1/'${filename}';bash -x ./gintar.sh)'
+  fi
+  return ${STATUS}
+}
+function clean_tests(){
+  echo -n "Cleaning up gitar.sh test data..." 1>&2
+  rm -rf .git opengl-series 0-opengl-series.tar
+  for x in 1 2 3 4 5;do
+    filename="${x}-opengl-series.gitar.${compression_list[x]}"
+    rm -f "${filename}"
+    rm -rf "/tmp/${filename}"
+  done
+  err "done"
+  exit 1
+}
+
 ######################################################################
 # Main execution logic
 ######################################################################
@@ -195,6 +312,12 @@ if [ "${BASENAME}" = "gitar.sh" ];then
     err "You must provide an argument!"
     err "Help: gitar.sh somedirectory"
     exit 1
+  elif [ ! -e "test" ] && [ "${1}" = "test" ];then
+    #this helps me test the program
+    run_tests
+  elif [ ! -e "clean-test" ] && [ "${1}" = "clean-test" ];then
+    #this cleans up the test data
+    clean_tests
   fi
   preflight "${INPUT}" && gitar "${INPUT}" && success "${INPUT}"
   err "A problem has occurred when creating the gitar archive."
