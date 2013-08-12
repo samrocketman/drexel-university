@@ -35,11 +35,11 @@
 ######################################################################
 
 #compression types ordered from least to greatest
-#  1 - no compression, just deduplication
-#  2 - deduplication+optimized git compression
-#  3 - deduplication+optimized git+gzip compression
-#  4 - deduplication+optimized git+bzip2 compression
-#  5 - deduplication+optimized git+lzma compression
+#  1 - no optimization, just git deduplication+tar
+#  2 - deduplication+optimized git+tar compression
+#  3 - deduplication+optimized git+tar+gzip compression
+#  4 - deduplication+optimized git+tar+bzip2 compression
+#  5 - deduplication+optimized git+tar+lzma compression
 compression_type="${compression_type:-3}"
 
 #Compression list helps to make the logic more human readable (e.g. in preflight check function)
@@ -108,8 +108,17 @@ function preflight(){
       err "find \"${1}\" -type d -name .git"
       STATUS=1
     fi
-    if [ -f "${1}.gitar" ];then
+    if [ "${compression_list[compression_type]}" = "dedupe_only" -o "${compression_list[compression_type]}" = "optimized" ] && [ -f "${1}.gitar" ];then
       err "${1}.gitar already exists!  Aborting..."
+      STATUS=1
+    elif [ "${compression_list[compression_type]}" = "gzip" ] && [ -f "${1}.gitar.gz" ];then
+      err "${1}.gitar.gz already exists!  Aborting..."
+      STATUS=1
+    elif [ "${compression_list[compression_type]}" = "bzip2" ] && [ -f "${1}.gitar.bz2" ];then
+      err "${1}.gitar.bz2 already exists!  Aborting..."
+      STATUS=1
+    elif [ "${compression_list[compression_type]}" = "lzma" ] && [ -f "${1}.gitar.lzma" ];then
+      err "${1}.gitar.lzma already exists!  Aborting..."
       STATUS=1
     fi
   elif [ "${BASENAME}" = "gintar.sh" ];then
@@ -152,20 +161,20 @@ function gitar(){
     tar -cf "${1}".gitar .git gintar.sh
   elif [ "${compression_list[compression_type]}" = "gzip" ];then
     #tar -czf "${1}".gitar .git gintar.sh
-    tar -cf - .git gintar.sh | gzip -9 - > "${1}".gitar
+    tar -cf - .git gintar.sh | gzip -9 - > "${1}".gitar.gz
   elif [ "${compression_list[compression_type]}" = "bzip2" ];then
     #tar -cjf "${1}".gitar .git gintar.sh
-    tar -cf - .git gintar.sh | bzip2 -9 - > "${1}".gitar
+    tar -cf - .git gintar.sh | bzip2 -9 - > "${1}".gitar.bz2
   elif [ "${compression_list[compression_type]}" = "lzma" ];then
-    tar -cf - .git gintar.sh | lzma -9 - > "${1}".gitar
+    tar -cf - .git gintar.sh | lzma -9 - > "${1}".gitar.lzma
   else
     err "Invalid compression type specified in gitar.sh.  Choose"
     err "compression_type=[1-5] where 1 is least and 5 is most compression."
-    err "1 - no compression, just deduplication"
-    err "2 - deduplication+optimized git compression"
-    err "3 - deduplication+optimized git+gzip compression"
-    err "4 - deduplication+optimized git+bzip2 compression"
-    err "5 - deduplication+optimized git+lzma compression"
+    err "1 - no optimization, just git deduplication+tar"
+    err "2 - deduplication+optimized git+tar compression"
+    err "3 - deduplication+optimized git+tar+gzip compression"
+    err "4 - deduplication+optimized git+tar+bzip2 compression"
+    err "5 - deduplication+optimized git+tar+lzma compression"
     STATUS=1
   fi
   if [ ! "$?" = "0" ];then
@@ -199,7 +208,15 @@ function success(){
     err "SUCCESS!"
     err ""
     err "Your gitar archive is ready.  To decompress run the following commands."
-    err "tar -xf \"${1}.gitar\" && ./gintar.sh"
+    if [ "gzip" = "${compression_list[compression_type]}" ];then
+      err "tar -xjf \"${1}.gitar\" && ./gintar.sh"
+    elif [ "bzip2" = "${compression_list[compression_type]}" ];then
+      err "tar -xjf \"${1}.gitar\" && ./gintar.sh"
+    elif [ "lzma" = "${compression_list[compression_type]}" ];then
+      err "tar -xJf \"${1}.gitar\" && ./gintar.sh"
+    else
+      err "tar -xf \"${1}.gitar\" && ./gintar.sh"
+    fi
     err ""
   elif [ "${BASENAME}" = "gintar.sh" ];then
     err "Successfully extracted!"
@@ -247,7 +264,7 @@ function try_compress(){
   if [ ! "$?" -eq "0" ];then
     STATUS=1
   fi
-  mv -f opengl-series.gitar "${filename}" &> /dev/null
+  mv -f opengl-series.gitar* "${filename}" &> /dev/null
   if [ ! "$?" -eq "0" ];then
     STATUS=1
   fi
@@ -272,6 +289,12 @@ function try_decompress(){
   fi
   ./gintar.sh &> /dev/null
   if [ ! "$?" -eq "0" ];then
+    STATUS=1
+  fi
+  if [ -d "./.git" ];then
+    STATUS=1
+  fi
+  if [ -f "./gintar.sh" ];then
     STATUS=1
   fi
   popd &> /dev/null

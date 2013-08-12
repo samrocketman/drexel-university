@@ -91,11 +91,11 @@ This is an [original idea by Tom Dalling](http://tomdalling.com/blog/random-stuf
 ### Compression options
 You can set different compression options with the `compression_type` environment variable.  The numbers are ordered from minimum compression to max compression.
 
-1. no compression, just deduplication
-2. deduplication+optimized git compression
-3. deduplication+optimized git+gzip compression
-4. deduplication+optimized git+bzip2 compression
-5. deduplication+optimized git+lzma compression
+1. no optimization, just git deduplication+tar
+2. deduplication+optimized git+tar compression
+3. deduplication+optimized git+tar+gzip compression
+4. deduplication+optimized git+tar+bzip2 compression
+5. deduplication+optimized git+tar+lzma compression
 
 Sample bash command for setting compression.
 
