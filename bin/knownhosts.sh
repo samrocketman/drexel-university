@@ -11,7 +11,7 @@
 STATUS=0
 
 while read line;do
-  if ! grep "$(ssh-keyscan -t rsa ${line} 2>/dev/null | awk '{print $3}')" "${HOME}/.ssh/known_hosts" &> /dev/null;then
+  if ! ssh-keygen -H -F $line | grep "$(ssh-keyscan -t rsa ${line} 2>/dev/null | awk '{print $3}')" &> /dev/null;then
     echo $line
     STATUS=1
   fi
