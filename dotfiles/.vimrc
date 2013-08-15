@@ -18,7 +18,7 @@ set ruler
 set number
 "expandtab means tabs create spaces in insert mode, softtabstop is the number of spaces created
 "tabstop affects visual representation of tabs only
-set tabstop=2
+set tabstop=4
 set expandtab
 set softtabstop=2
 
