@@ -15,6 +15,7 @@ set backspace=2
 set hlsearch
 "ruler shows line and char number in bottom right of vim
 set ruler
+"each line has line number prepended
 set number
 "expandtab means tabs create spaces in insert mode, softtabstop is the number of spaces created
 "tabstop affects visual representation of tabs only
@@ -27,7 +28,7 @@ set laststatus=2
 "set showtabline=2
 
 "ignore case
-set ic
+set ignorecase
 
 "set background=light
 set background=dark
@@ -36,7 +37,7 @@ if &t_Co > 1
   syntax enable
 endif
 
-set is
+set incsearch
 
 "This executes a command and puts output into a throw away scratch pad
 "source: http://vim.wikia.com/wiki/Display_output_of_shell_commands_in_new_window
