@@ -1,4 +1,6 @@
-# This is a set of munin plugins which I wrote or coauthored.
+# Munin Plugins
+
+This is a set of munin plugins which I wrote or coauthored.
 
 ---
 ## java\_vm\_time
