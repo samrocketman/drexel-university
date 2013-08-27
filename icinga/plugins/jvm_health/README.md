@@ -3,7 +3,7 @@
 The garbage collector's young object memory space is reported so that memory leaks can be detected in developing applications.  To learn more about performance tuning and garbage collection in Java 1.6 then check out the following articles.
 
 * http://www.petefreitag.com/articles/gctuning/
-* http://java.sun.com/performance/reference/whitepapers/6_performance.html
+* http://www.oracle.com/technetwork/java/javase/gc-tuning-6-140523.html
 
 ---
 ## How it works
