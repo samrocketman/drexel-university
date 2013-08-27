@@ -32,7 +32,7 @@ There should be a cron job which runs parsegarbagelogs.py every 15 minutes.
 
 ### Monitoring JVM-HEALTH
 
-`jvm_health.py` is a Icinga plugin which reads the calculated percentage from the sqlite database and reports a status to Icinga. If the young object memory percentage is less than 50% then it is good. If greater than 50% then warning. If greater than 90% then critical and a crash is imminent. Here is the `cmds` variable in the [report-status](https://github.com/sag47/drexel-university/blob/master/icinga/scripts/report-status.py) script for [passive Icinga checks](http://docs.icinga.org/latest/en/passivechecks.html).
+`jvm_health.py` is a Icinga plugin which reads the calculated percentage from the sqlite database and reports a status to Icinga. If the young object memory percentage is less than 50% then it is good. If greater than 50% then warning. If greater than 90% then critical and a crash is imminent. Here is the `cmds` variable in the [report-status.py](https://github.com/sag47/drexel-university/blob/master/icinga/scripts/report-status.py) script for [passive Icinga checks](http://docs.icinga.org/latest/en/passivechecks.html).
 
     cmds = {
       "LOAD": "check_load -w 5,5,5 -c 10,10,10",
@@ -42,3 +42,8 @@ There should be a cron job which runs parsegarbagelogs.py every 15 minutes.
       "JVM-HEALTH": "/usr/local/sbin/jvm_health.py"
     }
 
+### Resolving JVM-HEALTH error states
+
+First check the garbage.log to be sure that there is an actual problem with the free memory for young objects. See the articles previously mentioned for how to read garbage.log.  If garbage.log is truly reporting a problem then the next step is to look at munin for your JVM server under the "JVM Garbage Collection Time Spent" graph. It should look like a saw tooth under weekly, monthly, and yearly. If the graph is a permanently inclining step graph then it means there is possibly a memory leak in one of the test client apps on your JVM so work with your developer to figure out the root cause.  At this point, assuming you're not in a mid-crisis in production (you should have a service highly available or this should be a test system) you may go ahead and enable a remote JVM console and hook up Java VisualVM (`jvisualvm`).  See what you can figure out from thread dumps, heap dumps, and so on.  If you find your system is pegged at 100% CPU usage it could be caused by a race condition across unsynchronised threads.  You can verify that by profiling the runtime with `jvisualvm` and look to see if multiple threads are stuck in the same method.  Once you're done diagnosing you should go ahead and kill the JVM app server and restart it.
+
+In Icinga, to resolve the error state you must execute `parsegarbagelogs.py` (it updates the sqldb), `jvm_health.py` (to verify the check passes), and `report-status.py` to ensure an update is immediately submitted to Icinga.
