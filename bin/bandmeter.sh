@@ -18,6 +18,10 @@ if [ -z "${1}" ];then
   exit 1
 elif [ ! -e "/sys/class/net/${1}" ];then
   echo "Error: The device you specified does not exist!" 1>&2
+  echo "List of devices:" 1>&2
+  (cd /sys/class/net/ && ls -1) | while read device;do
+    echo "  ${device}" 1>&2
+  done
   echo "Usage: $(basename ${0}) device" 1>&2
   exit 1
 fi
