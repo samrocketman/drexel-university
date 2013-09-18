@@ -27,7 +27,7 @@ while true;do
   #R2 and T2 are now the old values from the last second
   R2="${R1}"
   T2="${T1}"
-  #date of right now in seconds since 1970
+  #date of right now in seconds since 1970-01-01 00:00:00 UTC
   DATE="$(date +%s)"
   R1="$(cat /sys/class/net/${1}/statistics/rx_bytes)"
   T1="$(cat /sys/class/net/${1}/statistics/tx_bytes)"
