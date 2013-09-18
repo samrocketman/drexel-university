@@ -39,7 +39,7 @@ while true;do
   RBPS="$(expr ${R1} - ${R2})"
   TKBPS="$(expr ${TBPS} / 1024)"
   RKBPS="$(expr ${RBPS} / 1024)"
-  current_message="tx ${1}: ${TKBPS} kb/s rx ${1}: ${RKBPS} kb/s"
+  current_message="tx ${1}: ${TKBPS} kB/s rx ${1}: ${RKBPS} kB/s"
   #If the last message is not the same as the current message then output the current message
   if [ ! "${last_message}" = "${current_message}" ];then
     echo "${DATE};${current_message}"
