@@ -1,11 +1,152 @@
 #!/bin/bash
-#Author: Sam Gleske
-#Origin: https://github.com/sag47/drexel-university/
-#OpenSSL 1.0.1 14 Mar 2012
-#Description:
-#  Generate a key and a Certificate Signing request using the server name as the argument.
-#
-#Usage:
-#  cert someserver.drexel.edu
+#Created by Sam Gleske
+#GNU bash, version 4.2.25(1)-release (x86_64-pc-linux-gnu)
+#DESCRIPTION:
+#  Create and renew X.509 SSL certificates for Drexel University, Medaille College, and Cabrini College
 
-openssl req -out $1.csr -new -newkey rsa:2048 -nodes -subj "/C=US/ST=Pennsylvania/L=Philadelphia/O=Drexel University/OU=IRT/CN=$1" -keyout $1.key
+#debugging enable
+set -e
+
+PROGNAME="${0##*/}"
+PROGVERSION="0.1.1"
+
+#program default variables
+create=false
+renew=false
+drexel_s=false
+medaille_s=false
+cabrini_s=false
+
+#
+# ARGUMENT HANDLING
+#
+
+#Short options are one letter.  If an argument follows a short opt then put a colon (:) after it
+SHORTOPTS="hvc:r:"
+LONGOPTS="help,version,create:,renew:,du,me,cc"
+usage()
+{
+  cat <<EOF
+${PROGNAME} ${PROGVERSION} - MIT License by Sam Gleske
+
+USAGE:
+  ${PROGNAME} [--du|--me|--cc] [--create|--renew] CNAME
+  ${PROGNAME} [--du|--me|--cc] [-c|-r] CNAME
+  ${PROGNAME} [--create|--renew] CNAME
+  ${PROGNAME} [-c|-r] CNAME
+
+DESCRIPTION:
+  This program generates and renews CSR for server certificates
+  for Drexel University.
+
+  -h,--help          Show help
+  -v,--version       Show program version
+  -c,--create CNAME  Create a key and CSR based on CNAME
+  -r,--renew CNAME   Renew a key and generate CSR based on CNAME.
+  --du               Set certificate subject to Drexel University.
+                     (default)
+  --me               Set certificate subject to Medaille College.
+  --cc               Set certificate subject to Cabrini College.
+
+
+EOF
+}
+ARGS=$(getopt -s bash --options "${SHORTOPTS}" --longoptions "${LONGOPTS}" --name "${PROGNAME}" -- "$@")
+eval set -- "$ARGS"
+while true; do
+  case $1 in
+    -h|--help)
+        usage 1>&2
+        exit 1
+      ;;
+    -v|--version)
+        echo "${PROGNAME} ${PROGVERSION}" 1>&2
+        exit 1
+      ;;
+    -c|--create)
+        create=true
+        cname="${2}"
+        shift 2
+      ;;
+    -r|--renew)
+        renew=true
+        cname="${2}"
+        shift 2
+      ;;
+    --du)
+        drexel_s=true
+      ;;
+    --me)
+        medaille_s=true
+      ;;
+    --cc)
+        cabrini_s=true
+      ;;
+    --)
+        shift
+        break
+      ;;
+    *)
+        shift
+      ;;
+    esac
+done
+
+#
+# Program functions
+#
+
+function preflight(){
+  STATUS=0
+  if [ "${create}" = "true" -a "${renew}" = "true" ] || [ "${create}" = "false" -a "${renew}" = "false" ];then
+    echo "Must choose --create or --renew."
+    STATUS=1
+  elif [ -z "${cname}" ];then
+    echo "CNAME may not be null."
+    STATUS=1
+  fi
+  if ${renew} && [ ! -f "${cname}.key" ];then
+    echo "${cname}.key does not exist!"
+    echo "Perhaps you need to --create a new CSR?"
+    STATUS=1
+  fi
+  return ${STATUS}
+}
+
+#
+# Main execution
+#
+
+#Run a preflight check on options for compatibility.
+if ! preflight 1>&2;then
+  echo "Command aborted due to previous errors." 1>&2
+  echo "Perhaps try --help option." 1>&2
+  exit 1
+fi
+
+if ${drexel_s};then
+  #drexel subject
+  SUBJECT="/C=US/ST=Pennsylvania/L=Philadelphia/O=Drexel University/OU=IRT/CN=${cname}"
+elif ${medaille_s};then
+  #medaille subject
+  SUBJECT="/C=US/ST=New York/L=Buffalo/O=Medaille College/OU=IRT/CN=${cname}"
+elif ${cabrini_s};then
+  #cabrini subject
+  SUBJECT="/C=US/ST=Pennsylvania/L=Radnor/O=Cabrini College/OU=IRT/CN=${cname}"
+fi
+DEFAULT_SUBJECT="/C=US/ST=Pennsylvania/L=Philadelphia/O=Drexel University/OU=IRT/CN=${cname}"
+SUBJECT="${SUBJECT:-${DEFAULT_SUBJECT}}"
+
+if ${create};then
+  #new certificate
+  openssl req -out ${cname}.csr -new -newkey rsa:2048 -nodes -subj "${SUBJECT}" -keyout ${cname}.key
+  echo "${cname}.csr has been generated!" 1>&2
+elif ${renew};then
+  #renew certificate
+  openssl req -out "${cname}.csr" -new -subj "${SUBJECT}" -key "${cname}.key"
+  echo "${cname}.csr has been generated!" 1>&2
+else
+  echo "You should never see this message!" 1>&2
+  exit 1
+fi
+openssl req -noout -text -in "${cname}.csr"
