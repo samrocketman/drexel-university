@@ -1,6 +1,16 @@
 # How do I use some of these scripts?
 
 ----
+## man2pdf
+
+[man2pdf](man2pdf) is a simple script which converts man pages to PDF format.  This is useful for reading man pages on the go in an e-book reader.  The permissions of the script should be 755.
+
+Example, converting the bash man page into PDF.
+
+    chmod 755 man2pdf
+    ./man2pdf bash
+
+----
 ## clusterssh helper scripts
 
 I use the following helper scripts to maintain the `/etc/clusters` file:
