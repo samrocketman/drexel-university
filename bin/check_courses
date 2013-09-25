@@ -1,0 +1,49 @@
+#!/bin/bash
+# Sam Gleske
+# Script for Drexel CS265 class
+# GNU bash, version 4.1.5(1)-release (x86_64-pc-linux-gnu)
+# diff (GNU diffutils) 3.0
+# Linux tux64-14.cs.drexel.edu 3.2.0-40-generic x86_64
+
+#Generate a class list file.  If there are differences between
+#the last run and the current run then email the student there
+#are new courses.
+#Note: First run will always email student.
+
+#The script should be 755 permissions.
+
+#Add it to cron.
+#crontab -e
+#0 12 * * * /home/user/bin/check_courses
+
+#remember which machine you create the cron job on.  Cron jobs are not replicated 
+#to all of the tux machines.  If you don't want to remember then run the following
+#command in vim at the top of this script.  It will insert the system you're on.
+# :r!uname -nrms
+
+#email address you wish to be notified of new assignment dates
+email_address="your@email.com"
+#temporary directory where you wish current assignments to be published.  One could also choose ~/public_html so the assignments can be accessed from the web.
+tmp_dir="$HOME/tmp"
+#Name of the persistent file containing assignment due dates.
+assignment_file="current_assignments.txt"
+#The submit_cli command and arguments
+submit_cli_command="/usr/local/bin/submit_cli --list -ccs265"
+
+#use absolute paths for binaries
+if [ ! -d "${tmp_dir}" ];then
+  /bin/mkdir "${tmp_dir}"
+fi
+
+${submit_cli_command} > "${tmp_dir}/tempclasslist"
+
+/usr/bin/diff "${tmp_dir}/tempclasslist" "${tmp_dir}/${assignment_file}" > /dev/null 2>&1
+if [ "$?" -ne "0" ];then
+  /usr/sbin/sendmail $email_address << EOF
+Subject: New CS265 assignments available
+New assignments listed in submit_cli.
+$(${submit_cli_command})
+EOF
+  /bin/mv -f "${tmp_dir}/tempclasslist" "${tmp_dir}/${assignment_file}"
+fi
+/bin/rm -f "${tmp_dir}/tempclasslist"
