@@ -10,6 +10,10 @@ This is a list of scripts I created while working at Drexel University.
 * [live_trends/README](live_trends/README)
 * [munin/plugins/README.md](munin/plugins/README.md)
 
+Generate bullet list of readme files:
+
+    find | grep -i readme | while read x;do readme="$(echo $x | sed 's#^\.##' | sed 's#^/##')";echo "* [$readme]($readme)";done
+
 # ./appserver-scripts/
 
 Some of these scripts help me automate deployments to app servers.
