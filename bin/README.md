@@ -20,7 +20,7 @@ I use the following helper scripts to maintain the `/etc/clusters` file:
 * `servercount`
 * `sort_clusters`
 
-I maintain my `/etc/clusters` file with a standard naming convention.  The first line has an `All_clusters` alias.  Its only purpose is to be an alias for all aliases in the `/etc/clusters` file.  From there every alias starts with one of two standard prefixes: `cluster_` or `host_`.
+I maintain my `/etc/clusters` file with a standardized naming convention.  The first line has an `All_clusters` alias.  Its only purpose is to be an alias for all aliases in the `/etc/clusters` file.  From there every alias starts with one of two standardized prefixes: `cluster_` or `host_`.
 
 Here is a sample `/etc/clusters` file using that naming convention.
 
