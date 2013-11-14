@@ -1,6 +1,6 @@
 # drexel-university
 
-This is a list of scripts I created while working at Drexel University.
+This is a list of scripts I created while working at Drexel University.  All licensed under the MIT license.
 
 ## List of README files.
 
