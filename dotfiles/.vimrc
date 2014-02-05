@@ -2,6 +2,12 @@
 "type :help command to see the vim help docs for that command
 :filetype on
 :au FileType c,cpp,java set cindent
+"will display the trailing space
+:highlight ExtraWhitespace ctermfg=Grey ctermbg=LightGrey
+:autocmd ColorScheme * highlight ExtraWhitespace ctermfg=Grey ctermbg=LightGrey
+:au BufWinEnter *.py let w:m2=matchadd('ExtraWhitespace', '\s\+\%#\@<!$', -1)
+"highlight lines longer than 80 chars in red
+":au BufWinEnter *.py let w:m2=matchadd('ErrorMsg', '\%>79v.\+', -1)
 
 set nocompatible
 set shiftwidth=2
