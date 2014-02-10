@@ -39,7 +39,7 @@ import os,commands
 
 #User configurable variables
 host=os.getenv("HOSTNAME")
-icinga_host = "nagios.irt.drexel.edu"
+icinga_host = "your.icingahost.com"
 send_nsca_cfg = "/etc/nagios/send_nsca.cfg"
 send_cmd = "/usr/sbin/send_nsca"
 
