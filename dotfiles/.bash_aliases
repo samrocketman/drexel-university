@@ -17,11 +17,6 @@ alias df='df -h'
 alias du='du -shc'
 alias amarokbackupdb='mysqldump --add-drop-table -u amarokuser -pamarok amarokdb > ~/Documents/amarok-backup.sql'
 alias firefoxvacuum='echo "sqlite3 VACUUM and REINDEX on firefox";for x in `find ~ -type f -name *.sqlite* | grep firefox`;do echo "$x";sqlite3 $x VACUUM;sqlite3 $x REINDEX;done'
-alias searchcontents='echo -n "Search pattern (file type): ";
- read pattern;
- echo -n "Search text (contents): "
- read query;
- find -iname "$pattern" -type f -print0 | xargs -0 grep -iIH "$query" | cut -d: -f1 | sort -u;'
 alias tux='ssh -C sag47@tux.cs.drexel.edu'
 alias x='exit'
 #alias cp='rsync -ruptv'
