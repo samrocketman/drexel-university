@@ -5,7 +5,7 @@
 # Usage: logchecker.py -s list [-h] [options] < logchecker.mbox
 #
 # Description:
-#    Sam's python script for filtering the filtered logs emailed by logchecker.
+#    Sam's python script for filtering the filtered logs emailed by logchecker from scribe.
 #    Searches logchecker logs for specific servers.
 #    Logchecker emails must be exported into an mbox format.
 #
@@ -25,8 +25,11 @@ from os.path import isfile
   Filters comprise of a file of OR expressions.  All expressions in the filters file will be matched against a line at once.
 """
 #Setting ENABLE_FILTERING=True forces filters to be on, otherwise it will be optional depending on the options passed to the program.
-ENABLE_FILTERING=True
+ENABLE_FILTERING=False
 FILTERS_FILE="/home/sam/.config/logchecker.filters" #for a better description of the contents of FILTERS_FILE see process_filters_file() comment block written below
+#Setting ENABLE_SERVERS_FILE=True forces servers file to be processed for filtering by server name, otherwise it will be optional depending on the options passed to the program.
+ENABLE_SERVERS_FILE=False
+SERVERS_FILE="/home/sam/.config/logchecker.servers" #for a better description of the contents of SERVERS_FILE see process_servers_file() comment block written below
 #global variable filters is created by process_filters_file() function
 #filters = ""
 
@@ -34,43 +37,46 @@ FILTERS_FILE="/home/sam/.config/logchecker.filters" #for a better description of
 def main():
   """
   main() function used as the main entry point.
-  
+
   Reads stdin of program and processes it
   """
-  global ENABLE_FILTERING,FILTERS_FILE,filters
+  global ENABLE_FILTERING,ENABLE_SERVERS_FILE,FILTERS_FILE,filters,sl
   #parsing the arguments for -w and -c
   #see docs http://docs.python.org/library/optparse.html
   parser = OptionParser(
-    usage = "usage: %prog -s list [-h] [options] < logchecker.mbox",
-    version = "%prog v0.2 created by Sam Gleske (sag47@drexel.edu)",
+    usage = "usage: %prog [-h] [options] < logchecker.mbox",
+    version = "%prog v0.3 created by Sam Gleske (sag47@drexel.edu)",
     description="This script filters logchecker logs from mbox files exported from mail clients by using stdin.  Filter logs for specific servers.  You must export the logchecker emails into the mbox format.  It does not matter if you include the Logchecker Summary or not; it will be ignored."
     )
   parser.add_option("-s","--server",action="store",type="str",dest="servers",default=False,help="Comma Separated list of servers in the logchecker list to filter for.",metavar="list")
+  parser.add_option("-n","--servers-file",action="store",type="str",dest="SERVERS_FILE",default=None,help="One per line list of servers in a file to filter for.  (Similar to -s)",metavar="FILE")
   parser.add_option("-f","--filters-file",action="store",type="str",dest="FILTERS_FILE",default=None,help="FILE contains filters which will be used to locally filter out logs line by line.",metavar="FILE")
   parser.add_option("-d","--disable-filters",action="store_true",dest="DISABLE_FILTERING",default=False,help="Disable line by line filtering no matter what options are passed.")
   (options,args) = parser.parse_args()
-  
+
   if not ENABLE_FILTERING:
     ENABLE_FILTERING = bool(options.FILTERS_FILE)
     FILTERS_FILE = options.FILTERS_FILE
-  
+  if not ENABLE_SERVERS_FILE:
+    ENABLE_SERVERS_FILE = bool(options.SERVERS_FILE)
+    SERVERS_FILE = options.SERVERS_FILE
+
   if options.DISABLE_FILTERING:
     ENABLE_FILTERING = False
-  
 
   sl = []
-  if not bool(options.servers):
-    parser.error("Try -h or --help")
-    exit(1)
-  else:
+  if bool(options.servers):
     sl = options.servers.split(',')
 
   #start processing data from stdin
   data = stdin.read()
 
-  #process the filters file if filtering is enabled,
+  #process the filters file if filtering is enabled
   if ENABLE_FILTERING:
     process_filters_file()
+  #process the servers file if it is enabled
+  if ENABLE_SERVERS_FILE:
+    process_servers_file()
 
   #split mbox file up into separate messages.  Messages will be handled individualy
   #docs http://docs.python.org/library/re.html
@@ -85,9 +91,12 @@ def main():
     while x < len(splitdata):
       if  not splitdata[x].split('\'')[1] in sl:
         notfound = True
-        for i in range(len(splitdata[x].split('\'')[1].split('.'))):
-          if splitdata[x].split('\'')[1].split('.')[i] in sl:
-            notfound = False
+        if len(sl) == 0:
+          notfound = False
+        else:
+          for i in range(len(splitdata[x].split('\'')[1].split('.'))):
+            if splitdata[x].split('\'')[1].split('.')[i] in sl:
+              notfound = False
         if notfound:
           x=x+2
           continue
@@ -114,10 +123,9 @@ def main():
 def process_filters_file():
   """
   This is only done once and executed by the main() function.
-  
+
   ABOUT THIS FILTERS_FILE
-    I use this file as a way to filter servers even more.  Not all admins wish to filter as much as I do so this is 
-    one way in which I can filter my local copy of logs without affecting the view of other admins.  This is a more
+    I use this file as a way to filter servers even more.  Not all admins wish to filter as much as I do so this is one way in which I can filter my local copy of logs without affecting the view of other admins.  This is a more
     line by line log filter in addition to the hostname filter for logchecker.py.
 
   RULES FOR FORMATTING THIS FILTERS_FILE
@@ -149,10 +157,45 @@ def process_filters_file():
   #filters = '^' + filters + '$'
   #turn the string of expressions into a regex object
   filters = re.compile(filters)
+def process_servers_file():
+  """
+  This is only done once and executed by the main() function.
+
+  ABOUT THIS SERVERS_FILE
+    I use this file as a way to make filtering server names even easier.  Rather than passing in a giant list to the -s
+    option one could opt-in to use the SERVERS_FILE instead.
+
+  RULES FOR FORMATTING THIS SERVERS_FILE
+    Comments are lines that start with a hash #.  Nested hashes are not evaluated as comments.
+    Each line is a server name which will be displayed in the logchecker logs.
+    The host name can be just the leading server name, e.g. myhost, or the FQDN, e.g. myhost.server.com.
+    Blank lines will be ignored.
+    Spaces on blank lines are also ignored.
+  """
+  global sl
+  if not isfile(SERVERS_FILE):
+    stderr.write("STDERR: Servers file does not exist: " + SERVERS_FILE + "\n")
+    stderr.write("STDERR: Try -h or --help options\n")
+    stderr.write("STDERR: Alternatively configure the SERVERS_FILE variable at the top of logchecker.py or disable filtering by setting ENABLE_SERVERS_FILE=False\n")
+    stderr.write("STDERR: Exiting.\n")
+    exit(1)
+  f = open(SERVERS_FILE,'r')
+  servers = f.read()
+  f.close()
+  #remove comments from the filters list.
+  #this basically splits the file into a list, remove all lines that start with a hash (#) and also if they contain only spaces.
+  servers = [expr for expr in servers.split('\n') if not re.match(r'^#.*|^\s*$',expr)]
+  #remove all entries in the filters list which are empty
+  servers = filter(len,servers)
+  #Append servers to list
+  sl = sl + servers
 
 
 if __name__ == "__main__":
-  main()
+  try:
+    main()
+  except IOError:
+    pass
   #cleaning up open file handles
   stdin.close()
   stderr.close()
@@ -164,6 +207,9 @@ if __name__ == "__main__":
 
 
  # CHANGELOG
+ # Tue Feb 11 13:13:00 EST 2014 v0.3 released
+ #   Added --servers-file option.  Ability to specify a file of hostnames to search for.
  # Wed May 30 19:50:19 EDT 2012 v0.2 released
  #   Added two options (--filters-file and --disable-filters).  Ability to filter logs line by line to cut out noise.
  #   Second option is to disable filtering.
+ # Created 5 Oct 2011 v0.1 released
