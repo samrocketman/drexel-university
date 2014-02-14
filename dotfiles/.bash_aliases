@@ -5,14 +5,6 @@ alias vpntest='openconnect -u sag47 -s /etc/vpnc/vpnc-script -g IRT-Private http
 #alias ls='ls -lah --color=auto'
 alias ls='ls --color=auto'
 alias ssh='ssh -C'
-alias clean='echo -n "Really clean this directory?";
-       read yorn;
-       if test "$yorn" = "y"; then
-           rm -f \#* *~ .*~ *.bak .*.bak *.tmp .*.tmp core a.out;
-           echo "Cleaned.";
-       else
-           echo "Not cleaned.";
-       fi'
 alias df='df -h'
 alias du='du -shc'
 alias amarokbackupdb='mysqldump --add-drop-table -u amarokuser -pamarok amarokdb > ~/Documents/amarok-backup.sql'
