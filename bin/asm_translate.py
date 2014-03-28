@@ -6,6 +6,7 @@
 #Python 2.7.3
 #Translates assembly comments from cz to en.
 #Requires google translate python module - https://github.com/terryyin/google-translate-python
+#Discussion - https://www.linuxquestions.org/questions/linux-newbie-8/script-to-translate-comments-to-english-4175499642/
 
 import argparse
 from os.path import isfile
