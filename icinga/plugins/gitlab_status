@@ -1,0 +1,66 @@
+#!/bin/bash
+#Sam Gleske
+#Wed Nov 13 10:28:55 EST 2013
+#Linux 2.6.32-358.18.1.el6.x86_64 x86_64
+#GNU bash, version 4.1.2(1)-release (x86_64-redhat-linux-gnu)
+
+#settings (critical must be less than warn)
+worker_count_warn="1"
+worker_count_crit="0"
+
+#exit status
+UNKNOWN=3 
+OK=0 
+WARNING=1 
+CRITICAL=2
+
+STATUS=0
+echo_string=""
+
+#this simple function will compare the integer argument with the current $STATUS and returns the greater of the two
+function set_status(){
+  if [ "$1" -gt "${STATUS}" ];then
+    return $1
+  else
+    return ${STATUS}
+  fi
+}
+
+worker_count="$(ps aux | grep '^gitlab' | grep 'unicorn_rails worker' | wc -l)"
+master_count="$(ps aux | grep '^gitlab' | grep 'unicorn_rails master' | wc -l)"
+sidekiq_count="$(ps aux | grep '^gitlab' | grep sidekiq | wc -l)"
+sidekiq_queue="$(ps aux 2>&1 | grep '^gitlab' | grep -v '^$' | grep sidekiq | sed 's#.*\[\(.*\)\]#\1#')"
+
+#check for the unicorn master
+if [ "${master_count}" -lt "1" ];then
+  echo_string="Unicorn Master: not running CRITICAL"
+  set_status "${CRITICAL}"
+  STATUS="$?"
+else
+  echo_string="Unicorn Master: ${master_count} OK"
+fi
+
+#check for the unicorn workers
+if [ "${worker_count}" -le "${worker_count_crit}" ];then
+  echo_string="${echo_string}; Unicorn Workers: ${worker_count} CRITICAL"
+  set_status "${CRITICAL}"
+  STATUS="$?"
+elif [ "${worker_count}" -le "${worker_count_warn}" ];then
+  echo_string="${echo_string}; Unicorn Workers: ${worker_count} WARNING"
+  set_status "${WARNING}"
+  STATUS="$?"
+else
+  echo_string="${echo_string}; Unicorn Workers: ${worker_count} OK"
+fi
+
+#check for sidekiq
+if [ "${sidekiq_count}" -lt "1" ];then
+  echo_string="${echo_string}; Sidekiq Queue: not running CRITICAL"
+  set_status "${CRITICAL}"
+  STATUS="$?"
+else
+  echo_string="${echo_string}; Sidekiq Queue: ${sidekiq_queue}"
+fi
+
+echo "${echo_string}"
+exit ${STATUS}

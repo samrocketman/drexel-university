@@ -43,6 +43,9 @@ if &t_Co > 1
   syntax enable
 endif
 
+":w!! will ask for password when trying to write to system files
+cmap w!! %!sudo tee > /dev/null %
+
 set incsearch
 
 "This executes a command and puts output into a throw away scratch pad
