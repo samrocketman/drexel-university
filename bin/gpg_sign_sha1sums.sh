@@ -13,7 +13,9 @@
 #DESCRIPTION
 #  This script will iterate through a gpg_encrypt_individual_files.sh
 #  encrypted directory and sign all of the sha1sum.txt files.  This
-#  is intended for checking the integrity of all checksummed files.
+#  is intended for ensuring the integrity of all checksummed files
+#  when, for example, uploading your encrypted files to a cloud
+#  filesharing service.
 
 if [ -z "$!" -a ! -d "$1" ];then
   echo "Error: must provide a directory as an argument." 1>&2
